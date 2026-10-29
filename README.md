@@ -92,6 +92,8 @@ and index.
 
 ## Quality and maintenance
 
+GitHub Actions runs tests with coverage on pushes and pull requests.
+
 ```bash
 # Check formatting and lint.
 uv run ruff format --check .
