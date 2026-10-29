@@ -1,0 +1,36 @@
+[project]
+name = "flask-template"
+version = "0.1.0"
+description = "flask-template"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "flask>=3.1.3",
+    "flask-cors>=6.0.5",
+    "flask-jwt-extended>=4.7.4",
+    "flask-limiter>=4.1.1",
+    "flask-migrate>=4.1.0",
+    "flask-sqlalchemy>=3.1.1",
+    "gunicorn>=26.2.0",
+    "psycopg2-binary>=2.9.12",
+    "python-dotenv>=1.2.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.4",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.coverage.run]
+branch = true
+source = ["app", "docker", "migrations", "run"]
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true

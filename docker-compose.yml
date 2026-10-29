@@ -1,0 +1,57 @@
+services:
+  backend:
+    build:
+      context: .
+      args:
+        PYTHON_VERSION: "3.14.7"
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      DATABASE_URL: postgresql://database:5432/flask_template
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-${SECRET_KEY}}
+      FLASK_DEBUG: "${FLASK_DEBUG:-false}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}"
+      RATELIMIT_STORAGE_URI: "${RATELIMIT_STORAGE_URI:-memory://}"
+      MAX_CONTENT_LENGTH: "${MAX_CONTENT_LENGTH:-1048576}"
+      TOKEN_BLOCKLIST_CLEANUP_INTERVAL: "${TOKEN_BLOCKLIST_CLEANUP_INTERVAL:-3600}"
+      DATABASE_WAIT_TIMEOUT: "${DATABASE_WAIT_TIMEOUT:-60}"
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:5000/', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  database:
+    image: postgres:18.6
+    environment:
+      POSTGRES_DB: flask_template
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  postgres_data:
