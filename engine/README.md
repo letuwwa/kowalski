@@ -7,7 +7,15 @@
 - Sockets close on completion or cancellation; cancellation propagates.
 
 Open ports do not prove vulnerabilities. DNS, IPv6, and service detection are
-not implemented. The CLI still uses simulated results.
+not implemented.
+
+Run the CLI (repeat `--allow-ip` to extend the explicit scope):
+
+```bash
+uv run python -m engine.scan 127.0.0.1 --allow-ip 127.0.0.1 --ports 22,5432,8000-8010
+```
+
+Options: `--timeout`, `--concurrency`, `--rate-limit`, `--no-color`, `--help`.
 
 Run local tests:
 
