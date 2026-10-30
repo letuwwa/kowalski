@@ -38,6 +38,7 @@ vulnerabilities. DNS, IPv6, and service identification are not implemented yet.
 Reports include UUID, UTC timestamps, configuration, evidence, and summary
 counts. Scans run independently of the API; reports are not saved to a database.
 See [engine notes](engine/README.md) for the service and report interfaces.
+The future API/frontend storage plan is in [scan history](docs/scan-history.md).
 
 ## Backend setup
 
