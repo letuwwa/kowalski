@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from rich.text import Text
+from typer import rich_utils
 from typer.testing import CliRunner
 
 from engine import scan as cli
@@ -12,6 +14,16 @@ from engine.services.tcp import PortState, TCPPortResult
 
 runner = CliRunner()
 ARGS = ["127.0.0.1", "--allow-ip", "127.0.0.1", "--ports", "8000"]
+
+
+@pytest.fixture(params=[False, True], ids=["plain", "styled"])
+def terminal_output(request, monkeypatch):
+    """Exercise Typer's plain and CI-style output regardless of the host terminal."""
+    monkeypatch.setattr(rich_utils, "FORCE_TERMINAL", request.param)
+    monkeypatch.setattr(
+        rich_utils, "COLOR_SYSTEM", "standard" if request.param else None
+    )
+    return request.param
 
 
 def test_cli_passes_options_and_displays_results(monkeypatch):
@@ -65,12 +77,15 @@ def test_cli_passes_options_and_displays_results(monkeypatch):
 
 
 @pytest.mark.parametrize("ports", ["", "0", "65536", "80-22", "22,", "abc", "1-2-3"])
-def test_cli_rejects_bad_ports_before_service_creation(monkeypatch, ports):
+def test_cli_rejects_bad_ports_before_service_creation(
+    monkeypatch, ports, terminal_output
+):
     factory = Mock()
     monkeypatch.setattr(cli, "ScannerService", factory)
     result = runner.invoke(cli.app, [*ARGS[:-1], ports])
     assert result.exit_code == 2
-    assert "--ports" in result.output
+    assert "--ports" in Text.from_ansi(result.output).plain
+    assert ("\x1b[" in result.output) == terminal_output
     factory.assert_not_called()
 
 
@@ -90,12 +105,13 @@ def test_cli_rejects_invalid_scope_or_configuration(args):
     assert result.exit_code == 2
 
 
-def test_cli_help_does_not_scan(monkeypatch):
+def test_cli_help_does_not_scan(monkeypatch, terminal_output):
     factory = Mock()
     monkeypatch.setattr(cli, "ScannerService", factory)
     result = runner.invoke(cli.app, ["--help"])
     assert result.exit_code == 0
-    assert "--allow-ip" in result.output
+    assert "--allow-ip" in Text.from_ansi(result.output).plain
+    assert ("\x1b[" in result.output) == terminal_output
     factory.assert_not_called()
 
 
