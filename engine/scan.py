@@ -2,6 +2,7 @@
 
 import asyncio
 import re
+from enum import StrEnum
 from typing import Annotated
 
 import typer
@@ -13,6 +14,11 @@ from engine.services import ScannerService
 from engine.services.tcp import PortState, TCPPortScanner
 
 app = typer.Typer(help="Run Kowalski network scanners.")
+
+
+class OutputFormat(StrEnum):
+    TABLE = "table"
+    JSON = "json"
 
 
 def parse_ports(value: str) -> list[int]:
@@ -54,6 +60,9 @@ def scan(
     rate_limit: Annotated[
         float, typer.Option(help="Maximum connection starts per second.")
     ] = 100.0,
+    output_format: Annotated[
+        OutputFormat, typer.Option("--format", help="Output format.")
+    ] = OutputFormat.TABLE,
     no_color: Annotated[
         bool, typer.Option("--no-color", help="Disable colored output.")
     ] = False,
@@ -64,7 +73,7 @@ def scan(
         scanner = TCPPortScanner(
             timeout=timeout, concurrency=concurrency, rate_limit=rate_limit
         )
-        results = asyncio.run(
+        report = asyncio.run(
             ScannerService(tcp_scanner=scanner).run_all(
                 target, selected_ports, allowed_targets=allowed_targets
             )
@@ -76,12 +85,15 @@ def scan(
         raise typer.Exit(code=130) from None
 
     console = Console(no_color=no_color)
+    if output_format == OutputFormat.JSON:
+        typer.echo(report.to_json())
+        return
     colors = {
         PortState.OPEN: "green",
         PortState.CLOSED: "red",
         PortState.UNKNOWN: "yellow",
     }
-    for scanner_name, port_results in results.items():
+    for scanner_name, port_results in report.results.items():
         table = Table(title=Text(f"Kowalski · {scanner_name.upper()} · {target}"))
         table.add_column("Port", justify="right")
         table.add_column("State")

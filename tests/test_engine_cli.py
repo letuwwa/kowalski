@@ -1,10 +1,13 @@
+import json
 import socket
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 from typer.testing import CliRunner
 
 from engine import scan as cli
+from engine.report import ScanConfiguration, ScanReport
 from engine.services.tcp import PortState, TCPPortResult
 
 runner = CliRunner()
@@ -14,11 +17,19 @@ ARGS = ["127.0.0.1", "--allow-ip", "127.0.0.1", "--ports", "8000"]
 def test_cli_passes_options_and_displays_results(monkeypatch):
     service = Mock()
     service.run_all = AsyncMock(
-        return_value={
-            "tcp": [
-                TCPPortResult("127.0.0.1", 8000, PortState.OPEN, "Connection accepted")
-            ]
-        }
+        return_value=ScanReport(
+            target="127.0.0.1",
+            configuration=ScanConfiguration((8000,), ("127.0.0.1",), 0.5, 2, 10),
+            started_at=datetime.now(UTC),
+            completed_at=datetime.now(UTC),
+            results={
+                "tcp": [
+                    TCPPortResult(
+                        "127.0.0.1", 8000, PortState.OPEN, "Connection accepted"
+                    )
+                ]
+            },
+        )
     )
     factory = Mock(return_value=service)
     monkeypatch.setattr(cli, "ScannerService", factory)
@@ -107,3 +118,36 @@ def test_cli_scans_local_listener():
     assert str(port) in result.output
     assert "open" in result.output
     assert "Connection accepted" in result.output
+
+
+def test_cli_json_is_clean_and_contains_report(monkeypatch):
+    service = Mock()
+    service.run_all = AsyncMock(
+        return_value=ScanReport(
+            target="127.0.0.1",
+            configuration=ScanConfiguration((8000,), ("127.0.0.1",), 1, 20, 100),
+            started_at=datetime.now(UTC),
+            completed_at=datetime.now(UTC),
+            results={
+                "tcp": [
+                    TCPPortResult("127.0.0.1", 8000, PortState.UNKNOWN, "Timed out")
+                ]
+            },
+        )
+    )
+    monkeypatch.setattr(cli, "ScannerService", Mock(return_value=service))
+    result = runner.invoke(cli.app, [*ARGS, "--format", "json"])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["target"] == "127.0.0.1"
+    assert payload["results"]["tcp"][0]["state"] == "unknown"
+    assert payload["summary"]["tcp"]["unknown"] == 1
+    assert result.stderr == ""
+
+
+def test_cli_rejects_unknown_output_format(monkeypatch):
+    factory = Mock()
+    monkeypatch.setattr(cli, "ScannerService", factory)
+    result = runner.invoke(cli.app, [*ARGS, "--format", "xml"])
+    assert result.exit_code == 2
+    factory.assert_not_called()
