@@ -14,6 +14,8 @@ dependencies = [
     "gunicorn>=26.2.0",
     "psycopg2-binary>=2.9.12",
     "python-dotenv>=1.2.3",
+    "rich>=15.0.0",
+    "typer>=0.27.3",
 ]
 
 [dependency-groups]
@@ -29,7 +31,7 @@ pythonpath = ["."]
 
 [tool.coverage.run]
 branch = true
-source = ["app", "docker", "migrations", "run"]
+source = ["app", "docker", "migrations", "run", "engine"]
 
 [tool.coverage.report]
 fail_under = 85
