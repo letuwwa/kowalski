@@ -1,15 +1,47 @@
 # Kowalski
 
-Flask API with PostgreSQL, JWT authentication, and role-based access control.
-Requires Python 3.14+, uv, and PostgreSQL or Docker Compose.
-Run commands from the repository root.
+An asynchronous Python security scanning engine for authorized assessments,
+with a Typer/Rich CLI and an optional Flask authentication backend.
+Currently supports scoped IPv4 TCP connect scans and JSON reports.
+
+Requires Python 3.14+ and uv. Run commands from the repository root.
+PostgreSQL and application secrets are required only for the backend.
 
 ## Setup
 
 ```bash
 # Install locked dependencies, including development tools.
 uv sync --locked
+```
 
+## Scan
+
+```bash
+# Scan explicit ports and ranges within the authorized IPv4 scope.
+uv run python -m engine.scan 127.0.0.1 --allow-ip 127.0.0.1 --ports 22,5432,8000-8010
+
+# Export a structured report.
+uv run python -m engine.scan 127.0.0.1 --allow-ip 127.0.0.1 --ports 22,5432 --format json > report.json
+
+# Show all options.
+uv run python -m engine.scan --help
+```
+
+`--allow-ip` is required and repeatable. Defaults: `--timeout 1`,
+`--concurrency 20`, and `--rate-limit 100` connection starts/second per scan.
+Use `--no-color` to disable colored results.
+
+Results distinguish `open` (accepted), `closed` (refused), and `unknown`
+(timeout or another OS error). Open ports do not prove service identity or
+vulnerabilities. DNS, IPv6, and service identification are not implemented yet.
+
+Reports include UUID, UTC timestamps, configuration, evidence, and summary
+counts. Scans run independently of the API; reports are not saved to a database.
+See [engine notes](engine/README.md) for the service and report interfaces.
+
+## Backend setup
+
+```bash
 # Create local configuration if .env does not already exist.
 cp .env.example .env
 
@@ -22,7 +54,7 @@ The default database is `kowalski`. `SECRET_KEY` must be at least 32 bytes;
 leave `JWT_SECRET_KEY` empty to reuse it. Percent-encode reserved characters
 in URL credentials. If changing `POSTGRES_PORT`, also update `DATABASE_URL`.
 
-## Run locally
+## Run backend locally
 
 ```bash
 # Start PostgreSQL with persistent storage.
@@ -99,7 +131,7 @@ GitHub Actions runs tests with coverage on pushes and pull requests.
 uv run ruff format --check .
 uv run ruff check .
 
-# Run tests with isolated SQLite and enforce 85% coverage.
+# Run tests with isolated SQLite and loopback sockets; enforce 85% coverage.
 uv run pytest --cov --cov-report=term-missing
 
 # Test against PostgreSQL: use a disposable database; tables are dropped.

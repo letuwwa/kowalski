@@ -534,6 +534,12 @@ When working inside this repository, Codex must follow these rules.
 
 Do not claim tests passed unless they were actually executed.
 
+### Commit Messages
+
+Keep the existing `type: short lowercase description` style for all new commits.
+Use prefixes such as `feature:`, `fix:`, `docs:`, and `build:` as appropriate.
+Example: `docs: update scanner usage and report documentation`.
+
 ---
 
 ## 10. Mentorship Expectations
