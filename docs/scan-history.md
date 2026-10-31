@@ -1,7 +1,7 @@
 # Report persistence and scan history
 
-Status: SQLAlchemy models and migration implemented for completed TCP reports.
-Persistence operations, API endpoints, and frontend history remain planned.
+Status: models, TCP persistence, API endpoints, worker jobs, and chronological
+history are implemented. See [API usage](scans-api.md). Frontend views remain planned.
 
 ## Agreed scope
 
@@ -17,12 +17,13 @@ Frontend → authenticated API → ScannerService → ScanReport
 
 ## Storage models
 
-SQLAlchemy models in `app/models/` and migration `9b7106cd24ef` define two tables:
+SQLAlchemy models in `app/models/` define reports and API jobs:
 
 | Table | Fields |
 | --- | --- |
 | `scan_runs` | Report UUID, user ID, target, start/end timestamps, configuration JSON, report schema version |
 | `tcp_port_results` | Scan ID, port, state, evidence, OS error number |
+| `scan_jobs` | Owner, target, configuration, status, timestamps, error, report reference |
 
 Each run belongs to one user and has many port results. Enforce uniqueness on
 `(scan_id, port)`. Derive ownership from the authenticated user, never a supplied
@@ -35,26 +36,27 @@ restricted. Results are observations, not vulnerability claims.
 
 Save a completed run and its results in one transaction. Preserve each run as a
 snapshot; later scans create new records. Handle repeated saves of the same
-report UUID without duplicating results. A storage failure must be reported
-without discarding the completed scan report.
+report UUID without duplicating results. A storage failure rolls back the report
+and marks the job failed; recovery/retry behavior is deferred.
 
 `engine/report.py` already provides UUIDs, UTC timestamps, configuration,
 evidence, and derived summary counts. `to_record()` retains native UUID/datetime
 values and JSON-compatible payloads, but is not an ORM model. Map reports to
 normalized rows in the persistence layer; no engine database dependency is needed.
 
-## Implementation order
+## Execution and next steps
 
-1. Next: save/list/retrieve operations with atomic writes and owner filtering.
-   Model tests already cover constraints, evidence, UUIDs, cascade/restrict
-   behavior, transaction rollback, and migration upgrade/downgrade.
-2. Authenticated history endpoints with pagination and ownership tests.
-3. Scan submission with explicit authorized scope and bounded execution.
-4. Selected-run comparisons, then frontend history, details, and comparison views.
+`POST /scans` queues work for a separate worker; PostgreSQL coordinates one active
+scan globally. Jobs are queued/running/completed/failed. Completed reports and
+job completion are saved atomically. Targets come from requests, not an env list.
 
-Decide background execution before adding scan submission: long scans should
-not occupy an HTTP request. Job mechanism, lifecycle states, handling of failed
-or cancelled runs, retention, and API deletion policies remain undecided.
+`GET /scans` lists owned requests, `/scans/<id>` returns status/results, and
+`/scans/history?target=<ip>` computes a chronological timeline. Comparisons are
+between consecutive completed runs, rather than two selected versions.
+
+Next: hostname support, then service identification, then a simple React app in
+`./frontend`; see [next features](next-features.md). Retention, cancellation,
+deletion, and automatic retries remain undecided; discuss them before adding behavior.
 
 ## Comparison semantics
 

@@ -36,6 +36,8 @@ def app(monkeypatch, request):
             @event.listens_for(db.engine, "connect")
             def enable_foreign_keys(connection, connection_record):
                 connection.execute("PRAGMA foreign_keys=ON")
+                # Modern transactions ensure savepoints roll back with the parent.
+                connection.autocommit = False
 
         db.create_all()
         limiter.reset()

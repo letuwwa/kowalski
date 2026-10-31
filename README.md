@@ -36,9 +36,10 @@ Results distinguish `open` (accepted), `closed` (refused), and `unknown`
 vulnerabilities. DNS, IPv6, and service identification are not implemented yet.
 
 Reports include UUID, UTC timestamps, configuration, evidence, and summary
-counts. Scans run independently of the API; reports are not saved to a database.
+counts. CLI scans run independently of the API and do not save to a database.
 See [engine notes](engine/README.md) for the service and report interfaces.
-The future API/frontend storage plan is in [scan history](docs/scan-history.md).
+The [scan API](docs/scans-api.md) saves reports and exposes run history.
+Next: [hostname support, service identification, then React](docs/next-features.md).
 
 ## Backend setup
 
@@ -111,7 +112,7 @@ uv run alembic -c migrations/alembic.ini history
 uv run flask --app run.py db check
 ```
 
-Current head is `9b7106cd24ef`, adding owned scan runs and TCP port results.
+Current head is `72e4c01a39bf`, adding API jobs after the report tables.
 The base revision is `ecf7573043bc`. Only if your database already applied
 **both old revisions**, ending at `a1c7d93e840f`, update its revision marker:
 
@@ -158,3 +159,14 @@ uv run flask --app run.py cleanup-token-blocklist
 
 Protected routes use `Authorization: Bearer <token>`. New users have the
 `regular` role; no admin is seeded.
+
+| Method | Route | Description |
+| --- | --- | --- |
+| POST | `/scans` | Queue a TCP scan (`202`) |
+| GET | `/scans` | List owned scan requests |
+| GET | `/scans/<id>` | Status and completed report |
+| GET | `/scans/history?target=<ip>` | Observations and changes across runs |
+
+Run `uv run flask --app run.py scan-worker` alongside the API; Compose starts
+the worker automatically. Targets are supplied in requests, with no environment
+allowlist. See [API usage](docs/scans-api.md).

@@ -2,6 +2,7 @@
 
 from collections.abc import Iterable
 from datetime import UTC, datetime
+from uuid import UUID, uuid4
 
 from engine.report import ScanConfiguration, ScanReport
 
@@ -24,6 +25,7 @@ class ScannerService:
         ports: Iterable[int],
         *,
         allowed_targets: Iterable[str],
+        report_id: UUID | None = None,
     ) -> ScanReport:
         """Collect TCP results; no scans run during construction or import."""
         selected_ports = tuple(ports)
@@ -40,6 +42,7 @@ class ScannerService:
             target, selected_ports, allowed_targets=scope
         )
         return ScanReport(
+            id=report_id if report_id is not None else uuid4(),
             target=target,
             configuration=configuration,
             started_at=started_at,

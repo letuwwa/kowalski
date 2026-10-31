@@ -5,6 +5,7 @@ from . import models as models
 from .config import Config
 from .extensions import register_extensions
 from .routers import register_blueprints
+from .worker import register_worker
 
 
 def create_app():
@@ -13,5 +14,6 @@ def create_app():
 
     register_extensions(app)
     register_blueprints(app)
+    register_worker(app)
 
     return app
