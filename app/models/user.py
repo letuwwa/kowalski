@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 import enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.models.base_model import BaseModel
+
+if TYPE_CHECKING:
+    from .scan_run import ScanRun
 
 
 class UserRole(str, enum.Enum):
@@ -48,6 +54,10 @@ class User(BaseModel):
         Enum(UserRole, name="user_role"),
         default=UserRole.REGULAR,
         nullable=False,
+    )
+
+    scan_runs: Mapped[list[ScanRun]] = relationship(
+        back_populates="user", passive_deletes="all"
     )
 
     def set_password(self, password: str) -> None:

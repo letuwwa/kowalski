@@ -1,6 +1,7 @@
 # Report persistence and scan history
 
-Status: planning only; implementation will follow later. Start with TCP reports.
+Status: SQLAlchemy models and migration implemented for completed TCP reports.
+Persistence operations, API endpoints, and frontend history remain planned.
 
 ## Agreed scope
 
@@ -14,9 +15,9 @@ Frontend → authenticated API → ScannerService → ScanReport
                             → persistence layer → PostgreSQL
 ```
 
-## Proposed storage
+## Storage models
 
-Use SQLAlchemy models and Alembic migrations with two tables:
+SQLAlchemy models in `app/models/` and migration `9b7106cd24ef` define two tables:
 
 | Table | Fields |
 | --- | --- |
@@ -26,6 +27,11 @@ Use SQLAlchemy models and Alembic migrations with two tables:
 Each run belongs to one user and has many port results. Enforce uniqueness on
 `(scan_id, port)`. Derive ownership from the authenticated user, never a supplied
 user ID; restrict history and report access to the owner.
+
+`ScanRun` requires the original report UUID. Port/state and timestamp checks
+are enforced by the database. An owner/time/UUID index supports history queries.
+Deleting a run cascades to its results; deleting an owner with history is
+restricted. Results are observations, not vulnerability claims.
 
 Save a completed run and its results in one transaction. Preserve each run as a
 snapshot; later scans create new records. Handle repeated saves of the same
@@ -39,15 +45,16 @@ normalized rows in the persistence layer; no engine database dependency is neede
 
 ## Implementation order
 
-1. Models, migration, and save/list/retrieve operations; test atomic writes,
-   duplicate saves, evidence preservation, and rollback.
+1. Next: save/list/retrieve operations with atomic writes and owner filtering.
+   Model tests already cover constraints, evidence, UUIDs, cascade/restrict
+   behavior, transaction rollback, and migration upgrade/downgrade.
 2. Authenticated history endpoints with pagination and ownership tests.
 3. Scan submission with explicit authorized scope and bounded execution.
 4. Selected-run comparisons, then frontend history, details, and comparison views.
 
 Decide background execution before adding scan submission: long scans should
 not occupy an HTTP request. Job mechanism, lifecycle states, handling of failed
-or cancelled runs, retention, and deletion policies remain undecided.
+or cancelled runs, retention, and API deletion policies remain undecided.
 
 ## Comparison semantics
 

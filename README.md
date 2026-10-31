@@ -111,11 +111,13 @@ uv run alembic -c migrations/alembic.ini history
 uv run flask --app run.py db check
 ```
 
-The single base revision is `ecf7573043bc`. Only if your database already applied
+Current head is `9b7106cd24ef`, adding owned scan runs and TCP port results.
+The base revision is `ecf7573043bc`. Only if your database already applied
 **both old revisions**, ending at `a1c7d93e840f`, update its revision marker:
 
 ```bash
 uv run flask --app run.py db stamp --purge ecf7573043bc
+uv run flask --app run.py db upgrade
 uv run flask --app run.py db check
 ```
 
