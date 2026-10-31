@@ -2,13 +2,13 @@ name: kowalski
 
 services:
   backend:
-    build:
+    build: &backend_build
       context: .
       args:
         PYTHON_VERSION: "3.14.7"
     ports:
       - "127.0.0.1:5000:5000"
-    environment:
+    environment: &backend_environment
       DATABASE_URL: postgresql://database:5432/kowalski
       PGUSER: ${POSTGRES_USER:-postgres}
       PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
@@ -34,6 +34,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 6
+
+  scan-worker:
+    build: *backend_build
+    environment: *backend_environment
+    entrypoint: []
+    command: ["flask", "--app", "run.py", "scan-worker"]
+    restart: on-failure
+    depends_on:
+      backend:
+        condition: service_healthy
 
   database:
     image: postgres:18.6

@@ -1,4 +1,5 @@
 import pytest
+from sqlalchemy import event
 
 from app import create_app
 from app.extensions import db, limiter
@@ -30,6 +31,14 @@ def app(monkeypatch, request):
     )
 
     with application.app_context():
+        if db.engine.dialect.name == "sqlite":
+
+            @event.listens_for(db.engine, "connect")
+            def enable_foreign_keys(connection, connection_record):
+                connection.execute("PRAGMA foreign_keys=ON")
+                # Modern transactions ensure savepoints roll back with the parent.
+                connection.autocommit = False
+
         db.create_all()
         limiter.reset()
         try:

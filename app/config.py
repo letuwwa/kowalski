@@ -84,6 +84,15 @@ def _secret_key() -> str:
 
 
 class Config:
+    # Resource bounds for API jobs. Destinations come from requests, not config.
+    SCAN_MAX_PORTS = 1024
+    SCAN_MAX_TIMEOUT = 5
+    SCAN_MAX_CONCURRENCY = 20
+    SCAN_MAX_RATE = 100
+    SCAN_MAX_PENDING_PER_USER = 5
+    SCAN_MAX_PENDING = 100
+    SCAN_JOB_TIMEOUT = 300
+
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     RATELIMIT_HEADERS_ENABLED = True
