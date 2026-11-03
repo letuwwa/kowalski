@@ -561,7 +561,7 @@ def test_hostname_jobs_keep_dns_snapshot_and_history_tracks_addresses(
     assert report["target"] == "scan.example.test"
     assert report["resolved_ips"] == ["127.0.0.1", "127.0.0.2"]
     assert report["summary"]["tcp"]["total"] == 2
-    assert report["schema_version"] == 2
+    assert report["schema_version"] == 3
     assert {(row["target"], row["port"]) for row in report["results"]["tcp"]} == {
         ("127.0.0.1", 443),
         ("127.0.0.2", 443),

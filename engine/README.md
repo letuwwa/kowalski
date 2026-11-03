@@ -8,6 +8,9 @@
 - `targets.resolve_ipv4()`: bounded DNS A resolution using [dnspython's async
   resolver](https://dnspython.readthedocs.io/en/stable/async-resolver-functions.html).
   Resolves once per run (5 seconds, at most 8 IPs); numeric destinations stay fixed.
+- `services.ssh.identify_ssh()`: receive-only SSH banner identification on selected
+  open ports (default 22). Reuses pinned IPs and the TCP timeout/rate limit; probes
+  run sequentially with at most 4 KiB read per connection.
 - `report.ScanReport`: UUID identity, UTC timestamps, evidence, and derived counts.
   `to_dict()` / `to_json()` produce JSON-compatible output; `to_record()` retains
   native UUID/datetime values for future SQLAlchemy Uuid/DateTime columns and
@@ -32,5 +35,7 @@ Run local tests:
 uv run pytest tests/test_tcp_scanner.py tests/test_scanner_service.py \
   tests/test_report.py tests/test_engine_cli.py
 ```
+
+SSH banner and cleanup tests: `uv run pytest tests/test_service_identification.py`.
 
 Hostname fixtures and loopback DNS integration: `uv run pytest tests/test_hostname_support.py`.

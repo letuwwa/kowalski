@@ -44,7 +44,7 @@ def report():
 def test_json_report_contains_evidence_configuration_and_summary(report):
     payload = json.loads(report.to_json())
     assert UUID(payload["id"]) == report.id
-    assert payload["schema_version"] == 2
+    assert payload["schema_version"] == 3
     assert payload["started_at"] == "2026-10-30T10:00:00+00:00"
     assert payload["completed_at"] == "2026-10-30T10:00:01+00:00"
     assert payload["configuration"] == {
@@ -142,6 +142,7 @@ def test_record_round_trips_through_sqlalchemy(report):
         Column("completed_at", DateTime(timezone=True), nullable=False),
         Column("configuration", JSON, nullable=False),
         Column("results", JSON, nullable=False),
+        Column("services", JSON, nullable=False),
     )
     database = create_engine("sqlite://")
     try:

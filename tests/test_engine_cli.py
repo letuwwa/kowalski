@@ -68,7 +68,10 @@ def test_cli_passes_options_and_displays_results(monkeypatch):
     )
     assert result.exit_code == 0, result.output
     service.run_all.assert_awaited_once_with(
-        "127.0.0.1", [8000, 8001, 8002], allowed_targets=["127.0.0.1", "127.0.0.2"]
+        "127.0.0.1",
+        [8000, 8001, 8002],
+        allowed_targets=["127.0.0.1", "127.0.0.2"],
+        service_ports=[22],
     )
     scanner = factory.call_args.kwargs["tcp_scanner"]
     assert (scanner.timeout, scanner.concurrency, scanner.rate_limit) == (0.5, 2, 10)
@@ -200,3 +203,33 @@ def test_cli_accepts_hostname_and_displays_actual_ip(monkeypatch):
     assert result.exit_code == 0, result.output
     assert "scan.example.test" in result.output
     assert "127.0.0.1" in result.output
+
+
+@pytest.mark.parametrize("ports,expected", [("2222", [2222]), ("none", [])])
+def test_cli_service_options_and_safe_display(monkeypatch, ports, expected):
+    from engine.report import ServiceObservation
+
+    report = ScanReport(
+        target="127.0.0.1",
+        configuration=ScanConfiguration((8000,), ("127.0.0.1",), 1, 20, 100),
+        started_at=datetime.now(UTC),
+        completed_at=datetime.now(UTC),
+        results={"tcp": []},
+        services=[
+            ServiceObservation(
+                "127.0.0.1",
+                2222,
+                "identified",
+                "",
+                protocol="ssh",
+                advertised_software="OpenSSH_9.6",
+            )
+        ],
+    )
+    service = Mock(run_all=AsyncMock(return_value=report))
+    monkeypatch.setattr(cli, "ScannerService", Mock(return_value=service))
+    result = runner.invoke(cli.app, [*ARGS, "--service-ports", ports, "--no-color"])
+    assert result.exit_code == 0, result.output
+    assert "OpenSSH_9.6" in result.output
+    assert "identified" in result.output
+    assert service.run_all.await_args.kwargs["service_ports"] == expected

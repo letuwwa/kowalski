@@ -67,19 +67,29 @@ def scan(
     output_format: Annotated[
         OutputFormat, typer.Option("--format", help="Output format.")
     ] = OutputFormat.TABLE,
+    service_ports: Annotated[
+        str,
+        typer.Option(
+            "--service-ports", help="SSH identification ports; use none to disable."
+        ),
+    ] = "22",
     no_color: Annotated[
         bool, typer.Option("--no-color", help="Disable colored output.")
     ] = False,
 ) -> None:
     """Scan selected TCP ports on an authorized IPv4 address or hostname."""
     selected_ports = parse_ports(ports)
+    identification_ports = [] if service_ports == "none" else parse_ports(service_ports)
     try:
         scanner = TCPPortScanner(
             timeout=timeout, concurrency=concurrency, rate_limit=rate_limit
         )
         report = asyncio.run(
             ScannerService(tcp_scanner=scanner).run_all(
-                target, selected_ports, allowed_targets=allowed_targets
+                target,
+                selected_ports,
+                allowed_targets=allowed_targets,
+                service_ports=identification_ports,
             )
         )
     except ValueError as error:
@@ -114,6 +124,28 @@ def scan(
             )
         console.print(table)
         console.print(f"{scanner_name.upper()} checks: {len(port_results)}")
+
+    if report.services:
+        table = Table(title="Service identification (advertised evidence)")
+        for column in (
+            "IP address",
+            "Port",
+            "Status",
+            "Protocol",
+            "Advertised software",
+            "Error",
+        ):
+            table.add_column(column)
+        for row in report.services:
+            table.add_row(
+                Text(row.ip_address),
+                str(row.port),
+                Text(row.status),
+                Text(row.protocol or "unknown"),
+                Text(row.advertised_software or ""),
+                Text(row.error or ""),
+            )
+        console.print(table)
 
 
 if __name__ == "__main__":

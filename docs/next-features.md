@@ -14,12 +14,10 @@ services. See [API usage](scans-api.md) for migration and output details.
 
 ## 2. Service identification
 
-- Begin with bounded SSH banner collection on selected open TCP ports.
-- Preserve raw evidence, detected protocol, and confidence; do not infer service
-  identity from the port number alone or treat versions as confirmed vulnerabilities.
-- Apply timeouts, byte limits, scope checks, concurrency limits, and cleanup.
-- Test valid, partial, malformed, silent, and misleading responses locally.
-- Discuss additional protocols and active probes before adding them.
+Implemented: bounded, receive-only SSH identification on selected open TCP ports,
+with pinned IPs, raw evidence, confidence, persistence, CLI/API options, and history.
+See [service identification](service-identification.md) for behavior and limits.
+Discuss additional protocols and active probes before adding them.
 
 ## 3. Simple React frontend
 

@@ -34,6 +34,7 @@ def validate_scan(payload: object) -> tuple[str, dict[str, object]]:
         "timeout",
         "concurrency",
         "rate_limit",
+        "service_ports",
     }
     if set(payload) - allowed_fields:
         raise BadRequest("Unsupported scan options")
@@ -46,7 +47,16 @@ def validate_scan(payload: object) -> tuple[str, dict[str, object]]:
         raise BadRequest(f"ports must contain 1-{config['SCAN_MAX_PORTS']} integers")
     if any(type(port) is not int or not 1 <= port <= 65535 for port in ports):
         raise BadRequest("Ports must be integers between 1 and 65535")
-    options = {}
+    service_ports = payload.get("service_ports", [22])
+    if (
+        not isinstance(service_ports, list)
+        or len(service_ports) > config["SCAN_MAX_PORTS"]
+        or any(
+            type(port) is not int or not 1 <= port <= 65535 for port in service_ports
+        )
+    ):
+        raise BadRequest("service_ports must be a list of valid TCP ports")
+    options = {"service_ports": sorted(set(service_ports))}
     for name, default, maximum in (
         ("timeout", 1, config["SCAN_MAX_TIMEOUT"]),
         (
@@ -221,6 +231,7 @@ def history(owner_id: UUID, target: str, args: Mapping[str, str]) -> dict[str, o
                 if previous
                 else False,
                 "changes": changes,
+                "service_changes": service_changes(previous, run),
                 "only_in_previous": [
                     {"ip_address": address, "port": port}
                     for address, port in sorted(before.keys() - after.keys())
@@ -239,3 +250,33 @@ def history(owner_id: UUID, target: str, args: Mapping[str, str]) -> dict[str, o
         )
         previous = run
     return {"target": target, "items": items, "next_cursor": cursor}
+
+
+def service_changes(
+    previous: ScanRun | None, current: ScanRun
+) -> list[dict[str, object]]:
+    """Compare overlapping observations only; missing evidence is not removal."""
+    before = (
+        {(row["ip_address"], row["port"]): row for row in (previous.services or [])}
+        if previous
+        else {}
+    )
+    after = {(row["ip_address"], row["port"]): row for row in (current.services or [])}
+    changes = []
+    for address, port in sorted(before.keys() & after.keys()):
+        old, new = before[(address, port)], after[(address, port)]
+        fields = ("protocol", "protocol_version", "advertised_software", "banner")
+        identified = old["status"] == new["status"] == "identified"
+        if (identified and any(old[key] != new[key] for key in fields)) or old[
+            "status"
+        ] != new["status"]:
+            changes.append(
+                {
+                    "ip_address": address,
+                    "port": port,
+                    "kind": "banner_changed" if identified else "inconclusive",
+                    "previous": old,
+                    "current": new,
+                }
+            )
+    return changes

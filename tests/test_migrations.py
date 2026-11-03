@@ -141,9 +141,19 @@ def test_hostname_migration_backfills_old_evidence_and_guards_downgrade(app):
         configuration=configuration,
         schema_version=1,
     )
-    db.session.add(legacy_run)
-    db.session.flush()
+    # Insert only columns available at the old migration revision.
     run_id = legacy_run.id
+    db.session.execute(
+        ScanRun.__table__.insert().values(
+            id=run_id,
+            user_id=owner_id,
+            target=legacy_run.target,
+            started_at=now,
+            completed_at=now,
+            configuration=configuration,
+            schema_version=1,
+        )
+    )
     # Describe the old child table, which has no destination-address column yet.
     old_results = table(
         "tcp_port_results",
@@ -201,6 +211,9 @@ def test_hostname_migration_backfills_old_evidence_and_guards_downgrade(app):
         result = runner.invoke(args=["db", "downgrade", "72e4c01a39bf"])
         assert result.exit_code != 0
         assert "Cannot downgrade" in result.output, result.output
+        # Earlier downgrade steps may have completed before the hostname guard.
+        result = runner.invoke(args=["db", "upgrade"])
+        assert result.exit_code == 0, result.output
         assert (
             db.session.get(ScanRun, host_id).tcp_port_results[0].ip_address
             == "127.0.0.2"
@@ -210,6 +223,8 @@ def test_hostname_migration_backfills_old_evidence_and_guards_downgrade(app):
         db.session.remove()
         result = runner.invoke(args=["db", "downgrade", "72e4c01a39bf"])
         assert result.exit_code != 0  # A queued hostname must be preserved too.
+        result = runner.invoke(args=["db", "upgrade"])
+        assert result.exit_code == 0, result.output
         db.session.delete(db.session.get(ScanJob, job_id))
         db.session.commit()
         db.session.remove()

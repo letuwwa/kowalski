@@ -2,7 +2,7 @@
 
 An asynchronous Python security scanning engine for authorized assessments,
 with a Typer/Rich CLI and an optional Flask authentication backend.
-Currently supports scoped IPv4/hostname TCP connect scans and JSON reports.
+Supports scoped IPv4/hostname TCP scans, SSH banner identification, and JSON reports.
 
 Requires Python 3.14+ and uv. Run commands from the repository root.
 PostgreSQL and application secrets are required only for the backend.
@@ -38,13 +38,15 @@ uv run python -m engine.scan scan.example.com --allow-target scan.example.com --
 Results distinguish `open` (accepted), `closed` (refused), and `unknown`
 (timeout or another OS error). Open ports do not prove service identity or
 vulnerabilities. Hostnames resolve once to at most eight IPv4 addresses per run;
-IPv6, URLs, and service identification are not implemented yet.
+IPv6 and URLs are not implemented yet. SSH identification follows on open port 22;
+use `--service-ports 22,2222` to select ports or `--service-ports none` to disable.
+Only ports included in the TCP scan are eligible. Banners are self-reported evidence.
 
 Reports include UUID, UTC timestamps, configuration, evidence, and summary
 counts. CLI scans run independently of the API and do not save to a database.
 See [engine notes](engine/README.md) for the service and report interfaces.
 The [scan API](docs/scans-api.md) saves reports and exposes run history.
-Next: [service identification, then React](docs/next-features.md).
+Next: [simple React frontend](docs/next-features.md).
 
 ## Backend setup
 
@@ -117,7 +119,7 @@ uv run alembic -c migrations/alembic.ini history
 uv run flask --app run.py db check
 ```
 
-Current head is `35ae702d91c4`, adding hostname targets and per-IP port evidence.
+Current head is `a62b9d7140ec`, adding stored SSH observations.
 The base revision is `ecf7573043bc`. Only if your database already applied
 **both old revisions**, ending at `a1c7d93e840f`, update its revision marker:
 
