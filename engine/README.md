@@ -3,7 +3,11 @@
 - `services.tcp.TCPPortScanner`: async IPv4 TCP scanning with explicit scope,
   timeouts, concurrency and rate limits, and socket cleanup.
 - `services.ScannerService.run_all()`: returns a completed `ScanReport` containing
-  configuration, timestamps, and results grouped by scanner (currently `tcp`).
+  the normalized IPv4/hostname target, resolved IPs, configuration, timestamps,
+  and per-IP results (currently `tcp`).
+- `targets.resolve_ipv4()`: bounded DNS A resolution using [dnspython's async
+  resolver](https://dnspython.readthedocs.io/en/stable/async-resolver-functions.html).
+  Resolves once per run (5 seconds, at most 8 IPs); numeric destinations stay fixed.
 - `report.ScanReport`: UUID identity, UTC timestamps, evidence, and derived counts.
   `to_dict()` / `to_json()` produce JSON-compatible output; `to_record()` retains
   native UUID/datetime values for future SQLAlchemy Uuid/DateTime columns and
@@ -16,6 +20,7 @@ Run the CLI:
 
 ```bash
 uv run python -m engine.scan 127.0.0.1 --allow-ip 127.0.0.1 --ports 22,5432,8000-8010
+uv run python -m engine.scan scan.example.com --allow-target scan.example.com --ports 443
 ```
 
 Add `--format json` for reports. See the [project README](../README.md) for
@@ -27,3 +32,5 @@ Run local tests:
 uv run pytest tests/test_tcp_scanner.py tests/test_scanner_service.py \
   tests/test_report.py tests/test_engine_cli.py
 ```
+
+Hostname fixtures and loopback DNS integration: `uv run pytest tests/test_hostname_support.py`.

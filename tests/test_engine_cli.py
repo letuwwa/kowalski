@@ -1,8 +1,10 @@
 import json
 import socket
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
+import dns.asyncresolver
 import pytest
 from rich.text import Text
 from typer import rich_utils
@@ -10,7 +12,7 @@ from typer.testing import CliRunner
 
 from engine import scan as cli
 from engine.report import ScanConfiguration, ScanReport
-from engine.services.tcp import PortState, TCPPortResult
+from engine.services.tcp import PortState, TCPPortResult, TCPPortScanner
 
 runner = CliRunner()
 ARGS = ["127.0.0.1", "--allow-ip", "127.0.0.1", "--ports", "8000"]
@@ -72,7 +74,7 @@ def test_cli_passes_options_and_displays_results(monkeypatch):
     assert (scanner.timeout, scanner.concurrency, scanner.rate_limit) == (0.5, 2, 10)
     assert "open" in result.output
     assert "Connection accepted" in result.output
-    assert "Scanned 1 ports." in result.output
+    assert "TCP checks: 1" in result.output
     assert "\x1b[" not in result.output
 
 
@@ -167,3 +169,34 @@ def test_cli_rejects_unknown_output_format(monkeypatch):
     result = runner.invoke(cli.app, [*ARGS, "--format", "xml"])
     assert result.exit_code == 2
     factory.assert_not_called()
+
+
+def test_cli_accepts_hostname_and_displays_actual_ip(monkeypatch):
+    monkeypatch.setattr(
+        dns.asyncresolver,
+        "resolve",
+        AsyncMock(return_value=[SimpleNamespace(address="127.0.0.1")]),
+    )
+    monkeypatch.setattr(
+        TCPPortScanner,
+        "scan",
+        AsyncMock(
+            return_value=[
+                TCPPortResult("127.0.0.1", 443, PortState.OPEN, "Connection accepted")
+            ]
+        ),
+    )
+    result = runner.invoke(
+        cli.app,
+        [
+            "scan.example.test",
+            "--allow-target",
+            "scan.example.test",
+            "--ports",
+            "443",
+            "--no-color",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "scan.example.test" in result.output
+    assert "127.0.0.1" in result.output

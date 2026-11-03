@@ -46,7 +46,9 @@ class ScanJob(BaseModel):
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
-    target: Mapped[str] = mapped_column(String(45), nullable=False)
+    target: Mapped[str] = mapped_column(
+        String(253).with_variant(String(45), "sqlite"), nullable=False
+    )
     configuration: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(String(9), default="queued", nullable=False)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

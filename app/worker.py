@@ -19,6 +19,7 @@ from app.services.scans import validate_scan
 from engine.report import ScanReport
 from engine.services import ScannerService
 from engine.services.tcp import TCPPortScanner
+from engine.targets import TargetResolutionError
 
 # SQLite supports one test/development worker process. PostgreSQL coordinates
 # processes with a session lock without holding a write transaction during scans.
@@ -131,6 +132,8 @@ def work_once() -> bool:
             raise
         except TimeoutError:
             fail_job(job_id, "Scan exceeded the server time limit")
+        except TargetResolutionError as error:
+            fail_job(job_id, str(error))
         except Exception:
             current_app.logger.exception("Scan job failed: %s", job_id)
             fail_job(job_id, "Scan or report storage failed; check server logs")

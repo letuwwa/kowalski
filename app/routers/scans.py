@@ -13,7 +13,7 @@ from app.extensions import db, limiter
 from app.models import ScanJob, ScanRun
 from app.routers.utils import json_body
 from app.services.reports import report_from_run
-from app.services.scans import history, ipv4, job_dict, paginate, submit_scan
+from app.services.scans import history, job_dict, paginate, parse_target, submit_scan
 
 scans_bp = Blueprint("scans", __name__, url_prefix="/scans")
 
@@ -57,7 +57,7 @@ def create_scan() -> ResponseReturnValue:
 def list_scans() -> ResponseReturnValue:
     query = select(ScanJob).where(ScanJob.user_id == current_user.id)
     if "target" in request.args:
-        query = query.where(ScanJob.target == ipv4(request.args["target"]))
+        query = query.where(ScanJob.target == parse_target(request.args["target"]))
     if status := request.args.get("status"):
         if status not in {"queued", "running", "completed", "failed"}:
             abort(400, description="Invalid scan status")
@@ -68,7 +68,7 @@ def list_scans() -> ResponseReturnValue:
 
 @scans_bp.get("/history")
 def scan_history() -> ResponseReturnValue:
-    target = ipv4(request.args.get("target"))
+    target = parse_target(request.args.get("target"))
     return history(current_user.id, target, request.args)
 
 

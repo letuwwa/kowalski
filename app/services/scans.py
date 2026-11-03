@@ -3,7 +3,6 @@
 import math
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
-from ipaddress import IPv4Address
 from uuid import UUID
 
 from flask import current_app
@@ -13,17 +12,16 @@ from werkzeug.exceptions import BadRequest, TooManyRequests
 
 from app.extensions import db
 from app.models import ScanJob, ScanRun
+from engine.targets import normalize_target
 
 from .reports import report_from_run, utc
 
 
-def ipv4(value: object) -> str:
-    if not isinstance(value, str):
-        raise BadRequest("target must be a literal IPv4 address")
+def parse_target(value: object) -> str:
     try:
-        return str(IPv4Address(value))
+        return normalize_target(value)
     except ValueError as error:
-        raise BadRequest("target must be a literal IPv4 address") from error
+        raise BadRequest(str(error)) from error
 
 
 def validate_scan(payload: object) -> tuple[str, dict[str, object]]:
@@ -41,7 +39,7 @@ def validate_scan(payload: object) -> tuple[str, dict[str, object]]:
         raise BadRequest("Unsupported scan options")
     if payload.get("scanners", ["tcp"]) != ["tcp"]:
         raise BadRequest("Only scanners: ['tcp'] is supported")
-    target = ipv4(payload.get("target"))
+    target = parse_target(payload.get("target"))
     config = current_app.config
     ports = payload.get("ports")
     if not isinstance(ports, list) or not 1 <= len(ports) <= config["SCAN_MAX_PORTS"]:
@@ -197,22 +195,23 @@ def history(owner_id: UUID, target: str, args: Mapping[str, str]) -> dict[str, o
     items = []
     for run in runs:
         before = (
-            {row.port: row.state for row in previous.tcp_port_results}
+            {(row.ip_address, row.port): row.state for row in previous.tcp_port_results}
             if previous
             else {}
         )
-        after = {row.port: row.state for row in run.tcp_port_results}
+        after = {(row.ip_address, row.port): row.state for row in run.tcp_port_results}
         changes = [
             {
+                "ip_address": address,
                 "port": port,
-                "previous": before[port],
-                "current": after[port],
+                "previous": before[(address, port)],
+                "current": after[(address, port)],
                 "kind": "inconclusive"
-                if "unknown" in (before[port], after[port])
+                if "unknown" in (before[(address, port)], after[(address, port)])
                 else "state_changed",
             }
-            for port in sorted(before.keys() & after.keys())
-            if before[port] != after[port]
+            for address, port in sorted(before.keys() & after.keys())
+            if before[(address, port)] != after[(address, port)]
         ]
         items.append(
             {
@@ -222,8 +221,20 @@ def history(owner_id: UUID, target: str, args: Mapping[str, str]) -> dict[str, o
                 if previous
                 else False,
                 "changes": changes,
-                "only_in_previous": sorted(before.keys() - after.keys()),
-                "only_in_current": sorted(after.keys() - before.keys()),
+                "only_in_previous": [
+                    {"ip_address": address, "port": port}
+                    for address, port in sorted(before.keys() - after.keys())
+                ],
+                "only_in_current": [
+                    {"ip_address": address, "port": port}
+                    for address, port in sorted(after.keys() - before.keys())
+                ],
+                "addresses_added": sorted(
+                    {key[0] for key in after} - {key[0] for key in before}
+                ),
+                "addresses_removed": sorted(
+                    {key[0] for key in before} - {key[0] for key in after}
+                ),
             }
         )
         previous = run

@@ -2,7 +2,7 @@
 
 An asynchronous Python security scanning engine for authorized assessments,
 with a Typer/Rich CLI and an optional Flask authentication backend.
-Currently supports scoped IPv4 TCP connect scans and JSON reports.
+Currently supports scoped IPv4/hostname TCP connect scans and JSON reports.
 
 Requires Python 3.14+ and uv. Run commands from the repository root.
 PostgreSQL and application secrets are required only for the backend.
@@ -29,17 +29,22 @@ uv run python -m engine.scan --help
 
 `--allow-ip` is required and repeatable. Defaults: `--timeout 1`,
 `--concurrency 20`, and `--rate-limit 100` connection starts/second per scan.
-Use `--no-color` to disable colored results.
+Use `--no-color` to disable colored results. For a hostname:
+
+```bash
+uv run python -m engine.scan scan.example.com --allow-target scan.example.com --ports 22,443
+```
 
 Results distinguish `open` (accepted), `closed` (refused), and `unknown`
 (timeout or another OS error). Open ports do not prove service identity or
-vulnerabilities. DNS, IPv6, and service identification are not implemented yet.
+vulnerabilities. Hostnames resolve once to at most eight IPv4 addresses per run;
+IPv6, URLs, and service identification are not implemented yet.
 
 Reports include UUID, UTC timestamps, configuration, evidence, and summary
 counts. CLI scans run independently of the API and do not save to a database.
 See [engine notes](engine/README.md) for the service and report interfaces.
 The [scan API](docs/scans-api.md) saves reports and exposes run history.
-Next: [hostname support, service identification, then React](docs/next-features.md).
+Next: [service identification, then React](docs/next-features.md).
 
 ## Backend setup
 
@@ -112,7 +117,7 @@ uv run alembic -c migrations/alembic.ini history
 uv run flask --app run.py db check
 ```
 
-Current head is `72e4c01a39bf`, adding API jobs after the report tables.
+Current head is `35ae702d91c4`, adding hostname targets and per-IP port evidence.
 The base revision is `ecf7573043bc`. Only if your database already applied
 **both old revisions**, ending at `a1c7d93e840f`, update its revision marker:
 
