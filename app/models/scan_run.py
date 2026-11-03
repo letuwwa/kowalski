@@ -50,6 +50,9 @@ class ScanRun(BaseModel):
     configuration: Mapped[dict[str, object]] = mapped_column(
         JSON(none_as_null=True), nullable=False
     )
+    services: Mapped[list[dict[str, object]] | None] = mapped_column(
+        JSON(none_as_null=True), nullable=True
+    )
     schema_version: Mapped[int] = mapped_column(nullable=False)
 
     user: Mapped[User] = relationship(back_populates="scan_runs")

@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
 from app.models import ScanRun, TCPPortResult
-from engine.report import ScanConfiguration, ScanReport
+from engine.report import ScanConfiguration, ScanReport, ServiceObservation
 from engine.services.tcp import PortState
 from engine.services.tcp import TCPPortResult as PortObservation
 
@@ -23,11 +23,15 @@ def report_from_run(run: ScanRun) -> ScanReport:
     return ScanReport(
         id=run.id,
         schema_version=run.schema_version,
+        services=[ServiceObservation(**row) for row in (run.services or [])],
         target=run.target,
         started_at=utc(run.started_at),
         completed_at=utc(run.completed_at),
         configuration=ScanConfiguration(
             ports=tuple(config["ports"]),
+            service_ports=tuple(config["service_ports"])
+            if "service_ports" in config
+            else None,
             allowed_targets=tuple(config["allowed_targets"]),
             timeout=config["timeout"],
             concurrency=config["concurrency"],
@@ -71,6 +75,7 @@ def store_report(report: ScanReport, owner_id: UUID) -> ScanRun:
                     completed_at=report.completed_at,
                     configuration=report.configuration.to_dict(),
                     schema_version=report.schema_version,
+                    services=[row.to_dict() for row in report.services],
                     tcp_port_results=[
                         TCPPortResult(
                             ip_address=row.target,

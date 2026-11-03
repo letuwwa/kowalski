@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from ipaddress import IPv4Address
 from typing import TYPE_CHECKING
@@ -14,6 +14,23 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True)
+class ServiceObservation:
+    ip_address: str
+    port: int
+    status: str
+    evidence_base64: str
+    protocol: str | None = None
+    banner: str | None = None
+    protocol_version: str | None = None
+    advertised_software: str | None = None
+    confidence: str | None = None
+    error: str | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class ScanConfiguration:
     ports: tuple[int, ...]
     allowed_targets: tuple[str, ...]
@@ -21,9 +38,16 @@ class ScanConfiguration:
     concurrency: int
     rate_limit: float
 
+    service_ports: tuple[int, ...] | None = None
+
     def to_dict(self) -> dict[str, object]:
         """Return JSON-compatible configuration suitable for a JSON column."""
         return {
+            **(
+                {"service_ports": list(self.service_ports)}
+                if self.service_ports is not None
+                else {}
+            ),
             "ports": list(self.ports),
             "allowed_targets": list(self.allowed_targets),
             "timeout": self.timeout,
@@ -47,7 +71,8 @@ class ScanReport:
     completed_at: datetime
     results: dict[str, list[TCPPortResult]]
     id: UUID = field(default_factory=uuid4)
-    schema_version: int = 2
+    schema_version: int = 3
+    services: list[ServiceObservation] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         for timestamp in (self.started_at, self.completed_at):
@@ -88,6 +113,11 @@ class ScanReport:
         database insert. Derived summary counts are deliberately not stored.
         """
         return {
+            **(
+                {"services": [row.to_dict() for row in self.services]}
+                if self.schema_version >= 3
+                else {}
+            ),
             "schema_version": self.schema_version,
             "id": self.id,
             "target": self.target,

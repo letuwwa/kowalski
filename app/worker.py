@@ -57,7 +57,11 @@ async def execute_scan(
     )
     async with asyncio.timeout(current_app.config["SCAN_JOB_TIMEOUT"]):
         return await ScannerService(scanner).run_all(
-            target, config["ports"], allowed_targets=[target], report_id=job_id
+            target,
+            config["ports"],
+            allowed_targets=[target],
+            report_id=job_id,
+            service_ports=config.get("service_ports", [22]),
         )
 
 
@@ -112,6 +116,7 @@ def work_once() -> bool:
                 {
                     "target": target,
                     "ports": config["ports"],
+                    "service_ports": config.get("service_ports", [22]),
                     "timeout": config["timeout"],
                     "concurrency": config["concurrency"],
                     "rate_limit": config["rate_limit"],

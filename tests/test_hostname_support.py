@@ -180,7 +180,7 @@ def test_service_pins_one_resolution_and_keeps_rate_across_addresses(monkeypatch
         assert report.resolved_ips == addresses
         assert [row.target for row in report.results["tcp"]] == list(addresses)
         assert report.to_dict()["resolved_ips"] == list(addresses)
-        assert report.schema_version == 2
+        assert report.schema_version == 3
 
     asyncio.run(scenario())
 
