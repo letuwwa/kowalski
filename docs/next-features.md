@@ -6,14 +6,11 @@ Keep changes incremental and discuss new behavior before expanding the scope.
 
 ## 1. Hostname support
 
-- Accept domain names alongside existing IPv4 targets in the API and engine.
-- Resolve DNS asynchronously, preserve the original hostname and resolved IPs
-  in reports, and connect to the validated numeric destinations.
-- Keep scope tied to the submitted hostname and its validated resolution;
-  do not introduce environment target allowlists or automatic asset discovery.
-- Handle resolution errors and timeouts. Decide how multiple returned addresses
-  are scanned and how hostname history is grouped before implementation.
-- Test with controlled DNS fixtures and loopback services, not public systems.
+Implemented: API, engine, and CLI accept hostnames; DNS resolves once per run
+with a 5-second deadline and an 8-address cap. Reports preserve the requested
+name and per-IP evidence. History groups by normalized target and compares
+matching IP/port observations. Tests use controlled DNS fixtures and loopback
+services. See [API usage](scans-api.md) for migration and output details.
 
 ## 2. Service identification
 

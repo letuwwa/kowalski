@@ -45,13 +45,17 @@ def parse_ports(value: str) -> list[int]:
 
 @app.command()
 def scan(
-    target: Annotated[str, typer.Argument(help="Literal IPv4 address to scan.")],
+    target: Annotated[str, typer.Argument(help="IPv4 address or hostname to scan.")],
     ports: Annotated[
         str, typer.Option("--ports", help="Ports and ranges, e.g. 22,80,8000-8010.")
     ],
     allowed_targets: Annotated[
         list[str],
-        typer.Option("--allow-ip", help="Authorized IPv4 address; repeat to add more."),
+        typer.Option(
+            "--allow-target",
+            "--allow-ip",
+            help="Authorized IPv4 address or hostname; repeat to add more.",
+        ),
     ],
     timeout: Annotated[
         float, typer.Option(help="Connection timeout in seconds.")
@@ -67,7 +71,7 @@ def scan(
         bool, typer.Option("--no-color", help="Disable colored output.")
     ] = False,
 ) -> None:
-    """Scan selected TCP ports within an explicitly authorized IPv4 scope."""
+    """Scan selected TCP ports on an authorized IPv4 address or hostname."""
     selected_ports = parse_ports(ports)
     try:
         scanner = TCPPortScanner(
@@ -94,18 +98,22 @@ def scan(
         PortState.UNKNOWN: "yellow",
     }
     for scanner_name, port_results in report.results.items():
-        table = Table(title=Text(f"Kowalski · {scanner_name.upper()} · {target}"))
+        table = Table(
+            title=Text(f"Kowalski · {scanner_name.upper()} · {report.target}")
+        )
         table.add_column("Port", justify="right")
+        table.add_column("IP address")
         table.add_column("State")
         table.add_column("Evidence")
         for result in port_results:
             table.add_row(
                 str(result.port),
+                Text(result.target),
                 Text(result.state.value, style=colors[result.state]),
                 Text(result.evidence),
             )
         console.print(table)
-        console.print(f"Scanned {len(port_results)} ports.")
+        console.print(f"{scanner_name.upper()} checks: {len(port_results)}")
 
 
 if __name__ == "__main__":

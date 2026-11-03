@@ -44,7 +44,7 @@ def report():
 def test_json_report_contains_evidence_configuration_and_summary(report):
     payload = json.loads(report.to_json())
     assert UUID(payload["id"]) == report.id
-    assert payload["schema_version"] == 1
+    assert payload["schema_version"] == 2
     assert payload["started_at"] == "2026-10-30T10:00:00+00:00"
     assert payload["completed_at"] == "2026-10-30T10:00:01+00:00"
     assert payload["configuration"] == {

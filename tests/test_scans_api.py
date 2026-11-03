@@ -4,8 +4,11 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import dns.asyncresolver
+import dns.resolver
 import pytest
 from flask_jwt_extended import create_access_token
 from sqlalchemy import func, inspect, select, text
@@ -16,7 +19,7 @@ from app.extensions import db
 from app.models import ScanJob, ScanRun, TCPPortResult, User
 from app.services.reports import store_report
 from engine.report import ScanConfiguration, ScanReport
-from engine.services.tcp import PortState
+from engine.services.tcp import PortState, TCPPortScanner
 from engine.services.tcp import TCPPortResult as Observation
 
 PAYLOAD = {"target": "127.0.0.1", "ports": [22, 80], "scanners": ["tcp"]}
@@ -138,7 +141,7 @@ def test_other_users_cannot_read_jobs_or_history(client, users, fake_execution):
 @pytest.mark.parametrize(
     "override,status",
     [
-        ({"target": "localhost"}, 400),
+        ({"target": "invalid host"}, 400),
         ({"target": "::1"}, 400),
         ({"target": 1}, 400),
         ({"ports": []}, 400),
@@ -221,7 +224,7 @@ def test_list_keyset_pagination_filters_and_validation(client, users):
         "limit=abc",
         "cursor=bad",
         "status=bad",
-        "target=localhost",
+        "target=invalid%20host",
     ):
         assert client.get(f"/scans?{query}", headers=auth).status_code == 400
     assert client.get("/scans/not-a-uuid", headers=auth).status_code == 400
@@ -259,10 +262,24 @@ def test_history_over_multiple_scans_with_gaps_unknowns_and_continuous_paginatio
     assert first["items"][0]["baseline_id"] is None
     changes = first["items"][1]["changes"]
     assert changes == [
-        {"port": 22, "previous": "closed", "current": "open", "kind": "state_changed"},
-        {"port": 80, "previous": "open", "current": "unknown", "kind": "inconclusive"},
+        {
+            "ip_address": "127.0.0.1",
+            "port": 22,
+            "previous": "closed",
+            "current": "open",
+            "kind": "state_changed",
+        },
+        {
+            "ip_address": "127.0.0.1",
+            "port": 80,
+            "previous": "open",
+            "current": "unknown",
+            "kind": "inconclusive",
+        },
     ]
-    assert first["items"][1]["only_in_current"] == [443]
+    assert first["items"][1]["only_in_current"] == [
+        {"ip_address": "127.0.0.1", "port": 443}
+    ]
     assert first["items"][1]["configuration_changed"]
     second = client.get(
         "/scans/history",
@@ -275,9 +292,15 @@ def test_history_over_multiple_scans_with_gaps_unknowns_and_continuous_paginatio
     ).json
     item = second["items"][0]
     assert item["baseline_id"] == str(reports[1].id)
-    assert item["only_in_previous"] == [80]
+    assert item["only_in_previous"] == [{"ip_address": "127.0.0.1", "port": 80}]
     assert item["changes"] == [
-        {"port": 443, "previous": "open", "current": "closed", "kind": "state_changed"}
+        {
+            "ip_address": "127.0.0.1",
+            "port": 443,
+            "previous": "open",
+            "current": "closed",
+            "kind": "state_changed",
+        }
     ]
     assert second["next_cursor"] is None
     filtered = client.get(
@@ -297,7 +320,7 @@ def test_history_over_multiple_scans_with_gaps_unknowns_and_continuous_paginatio
     "query",
     [
         {},
-        {"target": "localhost"},
+        {"target": "invalid host"},
         {"target": "127.0.0.1", "from": "2026-01-01"},
         {"target": "127.0.0.1", "from": "bad"},
         {
@@ -507,3 +530,108 @@ def test_postgres_concurrent_report_saves_are_idempotent(app, users):
         results = list(executor.map(save, range(2)))
     assert results == [report.id, report.id]
     assert db.session.scalar(select(func.count()).select_from(ScanRun)) == 1
+
+
+def test_hostname_jobs_keep_dns_snapshot_and_history_tracks_addresses(
+    client, users, monkeypatch
+):
+    auth = headers(users[0])
+    lookup = AsyncMock(
+        return_value=[SimpleNamespace(address=ip) for ip in ["127.0.0.1", "127.0.0.2"]]
+    )
+    monkeypatch.setattr(dns.asyncresolver, "resolve", lookup)
+    states = {"127.0.0.1": PortState.OPEN, "127.0.0.2": PortState.CLOSED}
+
+    async def probe(self, address, ports, *, allowed_targets):
+        assert address in allowed_targets
+        return [
+            Observation(address, port, states[address], f"Observed {states[address]}")
+            for port in ports
+        ]
+
+    monkeypatch.setattr(TCPPortScanner, "scan", probe)
+    first = client.post(
+        "/scans", json={"target": "SCAN.Example.Test.", "ports": [443]}, headers=auth
+    )
+    assert first.status_code == 202
+    assert first.json["target"] == "scan.example.test"
+    lookup.assert_not_awaited()
+    assert worker.work_once()
+    report = client.get(first.headers["Location"], headers=auth).json["report"]
+    assert report["target"] == "scan.example.test"
+    assert report["resolved_ips"] == ["127.0.0.1", "127.0.0.2"]
+    assert report["summary"]["tcp"]["total"] == 2
+    assert report["schema_version"] == 2
+    assert {(row["target"], row["port"]) for row in report["results"]["tcp"]} == {
+        ("127.0.0.1", 443),
+        ("127.0.0.2", 443),
+    }
+    assert (
+        len(client.get("/scans?target=SCAN.example.test.", headers=auth).json["items"])
+        == 1
+    )
+
+    lookup.return_value = [
+        SimpleNamespace(address=ip) for ip in ["127.0.0.2", "127.0.0.3"]
+    ]
+    states.update({"127.0.0.2": PortState.OPEN, "127.0.0.3": PortState.CLOSED})
+    second = client.post(
+        "/scans", json={"target": "scan.example.test", "ports": [443]}, headers=auth
+    )
+    assert second.status_code == 202
+    assert worker.work_once()
+    timeline = client.get("/scans/history?target=SCAN.example.test.", headers=auth).json
+    assert len(timeline["items"]) == 2
+    latest = timeline["items"][1]
+    assert latest["baseline_id"] == first.json["id"]
+    assert latest["addresses_added"] == ["127.0.0.3"]
+    assert latest["addresses_removed"] == ["127.0.0.1"]
+    assert latest["only_in_previous"] == [{"ip_address": "127.0.0.1", "port": 443}]
+    assert latest["only_in_current"] == [{"ip_address": "127.0.0.3", "port": 443}]
+    assert latest["changes"] == [
+        {
+            "ip_address": "127.0.0.2",
+            "port": 443,
+            "previous": "closed",
+            "current": "open",
+            "kind": "state_changed",
+        }
+    ]
+    assert lookup.await_count == 2  # No lookup occurs when retrieving reports/history.
+
+
+@pytest.mark.parametrize(
+    "error,message",
+    [
+        (dns.resolver.NXDOMAIN(), "does not exist"),
+        (dns.resolver.NoAnswer(), "No IPv4"),
+        (TimeoutError(), "DNS resolution timed out"),
+    ],
+)
+def test_hostname_dns_failure_marks_job_failed_without_port_results(
+    client, users, monkeypatch, error, message
+):
+    auth = headers(users[0])
+    monkeypatch.setattr(dns.asyncresolver, "resolve", AsyncMock(side_effect=error))
+    probe = AsyncMock()
+    monkeypatch.setattr(TCPPortScanner, "scan", probe)
+    response = client.post(
+        "/scans", json={"target": "scan.example.test", "ports": [443]}, headers=auth
+    )
+    assert response.status_code == 202
+    assert worker.work_once()
+    result = client.get(response.headers["Location"], headers=auth).json
+    assert result["status"] == "failed"
+    assert message in result["error"]
+    assert result["report"] is None
+    assert db.session.scalar(select(func.count()).select_from(TCPPortResult)) == 0
+    probe.assert_not_awaited()
+
+
+def test_hostname_longer_than_old_ip_column_is_accepted(client, users):
+    name = "a" * 60 + "." + "b" * 60 + ".example.test"
+    response = client.post(
+        "/scans", json={"target": name, "ports": [443]}, headers=headers(users[0])
+    )
+    assert response.status_code == 202
+    assert response.json["target"] == name

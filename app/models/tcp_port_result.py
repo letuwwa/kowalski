@@ -19,7 +19,9 @@ class TCPPortResult(BaseModel):
 
     __tablename__ = "tcp_port_results"
     __table_args__ = (
-        UniqueConstraint("scan_id", "port", name="uq_tcp_port_results_scan_port"),
+        UniqueConstraint(
+            "scan_id", "ip_address", "port", name="uq_tcp_port_results_scan_ip_port"
+        ),
         CheckConstraint("port BETWEEN 1 AND 65535", name="ck_tcp_port_results_port"),
         CheckConstraint(
             "state IN ('open', 'closed', 'unknown')", name="ck_tcp_port_results_state"
@@ -35,6 +37,7 @@ class TCPPortResult(BaseModel):
         nullable=False,
     )
     port: Mapped[int] = mapped_column(nullable=False)
+    ip_address: Mapped[str] = mapped_column(String(15), nullable=False)
     state: Mapped[str] = mapped_column(String(7), nullable=False)
     evidence: Mapped[str] = mapped_column(Text, nullable=False)
     error_number: Mapped[int | None] = mapped_column(nullable=True)

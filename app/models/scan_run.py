@@ -36,7 +36,11 @@ class ScanRun(BaseModel):
         ForeignKey("users.id", name="fk_scan_runs_user_id_users", ondelete="RESTRICT"),
         nullable=False,
     )
-    target: Mapped[str] = mapped_column(String(45), nullable=False)
+    # SQLite ignores VARCHAR lengths; retain its old declaration to avoid
+    # rebuilding a referenced parent table during migration with foreign keys on.
+    target: Mapped[str] = mapped_column(
+        String(253).with_variant(String(45), "sqlite"), nullable=False
+    )
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
@@ -53,5 +57,5 @@ class ScanRun(BaseModel):
         back_populates="scan_run",
         cascade="all, delete-orphan",
         passive_deletes=True,
-        order_by="TCPPortResult.port",
+        order_by="(TCPPortResult.ip_address, TCPPortResult.port)",
     )

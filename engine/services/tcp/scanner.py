@@ -24,6 +24,17 @@ class TCPPortResult:
     error_number: int | None = None
 
 
+def validate_ports(ports: Iterable[int]) -> tuple[int, ...]:
+    selected: set[int] = set()
+    for port in ports:
+        if type(port) is not int or not 1 <= port <= 65535:
+            raise ValueError("Ports must be integers between 1 and 65535")
+        selected.add(port)
+    if not selected:
+        raise ValueError("At least one port is required")
+    return tuple(sorted(selected))
+
+
 class TCPPortScanner:
     """Scan explicit ports on one allowed IPv4 address without sending payloads.
 
@@ -70,13 +81,7 @@ class TCPPortScanner:
         scope = frozenset(IPv4Address(item) for item in allowed_targets)
         if address not in scope:
             raise ValueError(f"Target {address} is outside the allowed scope")
-        selected_ports: set[int] = set()
-        for port in ports:
-            if type(port) is not int or not 1 <= port <= 65535:
-                raise ValueError("Ports must be integers between 1 and 65535")
-            selected_ports.add(port)
-        if not selected_ports:
-            raise ValueError("At least one port is required")
+        selected_ports = validate_ports(ports)
 
         pending = iter(sorted(selected_ports))
         results: list[TCPPortResult] = []

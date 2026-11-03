@@ -1,12 +1,15 @@
 """Coordinate the currently implemented scanners."""
 
+import asyncio
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from engine.report import ScanConfiguration, ScanReport
+from engine.targets import normalize_target, resolve_ipv4
 
 from .tcp import TCPPortScanner
+from .tcp.scanner import validate_ports
 
 
 class ScannerService:
@@ -28,9 +31,13 @@ class ScannerService:
         report_id: UUID | None = None,
     ) -> ScanReport:
         """Collect TCP results; no scans run during construction or import."""
-        selected_ports = tuple(ports)
-        scope = tuple(allowed_targets)
+        target = normalize_target(target)
+        selected_ports = validate_ports(ports)
+        scope = tuple(normalize_target(item) for item in allowed_targets)
+        if target not in scope:
+            raise ValueError(f"Target {target} is outside the allowed scope")
         started_at = datetime.now(UTC)
+        addresses = await resolve_ipv4(target)
         configuration = ScanConfiguration(
             ports=selected_ports,
             allowed_targets=scope,
@@ -38,9 +45,16 @@ class ScannerService:
             concurrency=self.tcp_scanner.concurrency,
             rate_limit=self.tcp_scanner.rate_limit,
         )
-        results = await self.tcp_scanner.scan(
-            target, selected_ports, allowed_targets=scope
-        )
+        results = []
+        for index, address in enumerate(addresses):
+            if index:
+                # Keep the rate bound across separate address scans as well.
+                await asyncio.sleep(1 / self.tcp_scanner.rate_limit)
+            results.extend(
+                await self.tcp_scanner.scan(
+                    address, selected_ports, allowed_targets=addresses
+                )
+            )
         return ScanReport(
             id=report_id if report_id is not None else uuid4(),
             target=target,

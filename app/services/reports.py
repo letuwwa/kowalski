@@ -1,6 +1,7 @@
 """Map engine reports to database records without coupling the engine to SQLAlchemy."""
 
 from datetime import UTC, datetime
+from ipaddress import IPv4Address
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
@@ -21,6 +22,7 @@ def report_from_run(run: ScanRun) -> ScanReport:
     config = run.configuration
     return ScanReport(
         id=run.id,
+        schema_version=run.schema_version,
         target=run.target,
         started_at=utc(run.started_at),
         completed_at=utc(run.completed_at),
@@ -34,13 +36,16 @@ def report_from_run(run: ScanRun) -> ScanReport:
         results={
             "tcp": [
                 PortObservation(
-                    run.target,
+                    row.ip_address,
                     row.port,
                     PortState(row.state),
                     row.evidence,
                     row.error_number,
                 )
-                for row in run.tcp_port_results
+                for row in sorted(
+                    run.tcp_port_results,
+                    key=lambda row: (IPv4Address(row.ip_address), row.port),
+                )
             ]
         },
     )
@@ -65,9 +70,10 @@ def store_report(report: ScanReport, owner_id: UUID) -> ScanRun:
                     started_at=report.started_at,
                     completed_at=report.completed_at,
                     configuration=report.configuration.to_dict(),
-                    schema_version=1,
+                    schema_version=report.schema_version,
                     tcp_port_results=[
                         TCPPortResult(
+                            ip_address=row.target,
                             port=row.port,
                             state=row.state.value,
                             evidence=row.evidence,

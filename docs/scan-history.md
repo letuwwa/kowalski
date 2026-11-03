@@ -22,11 +22,11 @@ SQLAlchemy models in `app/models/` define reports and API jobs:
 | Table | Fields |
 | --- | --- |
 | `scan_runs` | Report UUID, user ID, target, start/end timestamps, configuration JSON, report schema version |
-| `tcp_port_results` | Scan ID, port, state, evidence, OS error number |
+| `tcp_port_results` | Scan ID, destination IP, port, state, evidence, OS error number |
 | `scan_jobs` | Owner, target, configuration, status, timestamps, error, report reference |
 
 Each run belongs to one user and has many port results. Enforce uniqueness on
-`(scan_id, port)`. Derive ownership from the authenticated user, never a supplied
+`(scan_id, ip_address, port)`. Derive ownership from the authenticated user, never a supplied
 user ID; restrict history and report access to the owner.
 
 `ScanRun` requires the original report UUID. Port/state and timestamp checks
@@ -54,8 +54,12 @@ job completion are saved atomically. Targets come from requests, not an env list
 `/scans/history?target=<ip>` computes a chronological timeline. Comparisons are
 between consecutive completed runs, rather than two selected versions.
 
-Next: hostname support, then service identification, then a simple React app in
-`./frontend`; see [next features](next-features.md). Retention, cancellation,
+Hostname support is implemented: preserve the normalized requested name and
+each resolved IP. History compares matching IP/port pairs and reports DNS address
+changes separately. Existing IPv4 rows are backfilled by migration `35ae702d91c4`.
+
+Next: service identification, then a simple React app in `./frontend`;
+see [next features](next-features.md). Retention, cancellation,
 deletion, and automatic retries remain undecided; discuss them before adding behavior.
 
 ## Comparison semantics

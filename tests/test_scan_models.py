@@ -83,6 +83,7 @@ def test_report_uuid_configuration_evidence_and_relationships_round_trip(owner):
         schema_version=1,
         tcp_port_results=[
             TCPPortResult(
+                ip_address="127.0.0.1",
                 port=result.port,
                 state=result.state.value,
                 evidence=result.evidence,
@@ -158,7 +159,13 @@ def test_scan_requires_existing_owner(app, user_id):
 @pytest.mark.parametrize("scan_id", [None, uuid.uuid4()])
 def test_result_requires_existing_scan(app, scan_id):
     db.session.add(
-        TCPPortResult(scan_id=scan_id, port=22, state="open", evidence="Accepted")
+        TCPPortResult(
+            ip_address="127.0.0.1",
+            scan_id=scan_id,
+            port=22,
+            state="open",
+            evidence="Accepted",
+        )
     )
     with pytest.raises(IntegrityError):
         db.session.commit()
@@ -168,7 +175,13 @@ def test_result_requires_existing_scan(app, scan_id):
 @pytest.mark.parametrize("port", [0, -1, 65536, None])
 def test_invalid_ports_are_rejected(scan_run, port):
     db.session.add(
-        TCPPortResult(scan_run=scan_run, port=port, state="open", evidence="Accepted")
+        TCPPortResult(
+            ip_address="127.0.0.1",
+            scan_run=scan_run,
+            port=port,
+            state="open",
+            evidence="Accepted",
+        )
     )
     with pytest.raises(IntegrityError):
         db.session.commit()
@@ -178,7 +191,13 @@ def test_invalid_ports_are_rejected(scan_run, port):
 @pytest.mark.parametrize("state", ["bad", "OPEN", "", None])
 def test_invalid_states_are_rejected(scan_run, state):
     db.session.add(
-        TCPPortResult(scan_run=scan_run, port=22, state=state, evidence="Evidence")
+        TCPPortResult(
+            ip_address="127.0.0.1",
+            scan_run=scan_run,
+            port=22,
+            state=state,
+            evidence="Evidence",
+        )
     )
     with pytest.raises(IntegrityError):
         db.session.commit()
@@ -189,7 +208,11 @@ def test_invalid_states_are_rejected(scan_run, state):
 @pytest.mark.parametrize("state", ["open", "closed", "unknown"])
 def test_supported_states_and_boundary_ports_are_stored(scan_run, port, state):
     result = TCPPortResult(
-        scan_run=scan_run, port=port, state=state, evidence="Evidence"
+        ip_address="127.0.0.1",
+        scan_run=scan_run,
+        port=port,
+        state=state,
+        evidence="Evidence",
     )
     db.session.add(result)
     db.session.commit()
@@ -198,19 +221,33 @@ def test_supported_states_and_boundary_ports_are_stored(scan_run, port, state):
 
 
 def test_result_requires_evidence(scan_run):
-    db.session.add(TCPPortResult(scan_run=scan_run, port=22, state="open"))
+    db.session.add(
+        TCPPortResult(ip_address="127.0.0.1", scan_run=scan_run, port=22, state="open")
+    )
     with pytest.raises(IntegrityError):
         db.session.commit()
     db.session.rollback()
 
 
 def test_duplicate_ports_are_rejected_and_same_port_in_later_run_is_allowed(scan_run):
-    first = TCPPortResult(scan_run=scan_run, port=22, state="open", evidence="Accepted")
+    first = TCPPortResult(
+        ip_address="127.0.0.1",
+        scan_run=scan_run,
+        port=22,
+        state="open",
+        evidence="Accepted",
+    )
     db.session.add(first)
     db.session.commit()
     scan_id = scan_run.id
     db.session.add(
-        TCPPortResult(scan_id=scan_id, port=22, state="closed", evidence="Refused")
+        TCPPortResult(
+            ip_address="127.0.0.1",
+            scan_id=scan_id,
+            port=22,
+            state="closed",
+            evidence="Refused",
+        )
     )
     with pytest.raises(IntegrityError):
         db.session.commit()
@@ -219,7 +256,9 @@ def test_duplicate_ports_are_rejected_and_same_port_in_later_run_is_allowed(scan
 
     later = make_run(scan_run.user)
     later.tcp_port_results.append(
-        TCPPortResult(port=22, state="closed", evidence="Refused")
+        TCPPortResult(
+            ip_address="127.0.0.1", port=22, state="closed", evidence="Refused"
+        )
     )
     db.session.add(later)
     db.session.commit()
@@ -246,7 +285,11 @@ def test_duplicate_report_uuid_is_rejected(scan_run):
 @pytest.mark.parametrize("bulk_delete", [False, True])
 def test_deleting_scan_removes_results_but_preserves_owner(scan_run, bulk_delete):
     result = TCPPortResult(
-        scan_run=scan_run, port=22, state="open", evidence="Accepted"
+        ip_address="127.0.0.1",
+        scan_run=scan_run,
+        port=22,
+        state="open",
+        evidence="Accepted",
     )
     db.session.add(result)
     db.session.commit()
@@ -280,10 +323,32 @@ def test_failed_result_insert_rolls_back_entire_run(owner):
     scan = make_run(owner)
     scan_id = scan.id
     scan.tcp_port_results.append(
-        TCPPortResult(port=0, state="open", evidence="Invalid")
+        TCPPortResult(ip_address="127.0.0.1", port=0, state="open", evidence="Invalid")
     )
     db.session.add(scan)
     with pytest.raises(IntegrityError):
         db.session.commit()
     db.session.rollback()
     assert db.session.get(ScanRun, scan_id) is None
+
+
+def test_same_port_on_distinct_addresses_is_preserved(scan_run):
+    scan_run.tcp_port_results = [
+        TCPPortResult(ip_address=address, port=443, state="open", evidence="Accepted")
+        for address in ("127.0.0.1", "127.0.0.2")
+    ]
+    db.session.commit()
+    db.session.expire_all()
+    assert [row.ip_address for row in scan_run.tcp_port_results] == [
+        "127.0.0.1",
+        "127.0.0.2",
+    ]
+
+
+def test_port_result_requires_destination_address(scan_run):
+    db.session.add(
+        TCPPortResult(scan_run=scan_run, port=443, state="open", evidence="Accepted")
+    )
+    with pytest.raises(IntegrityError):
+        db.session.commit()
+    db.session.rollback()

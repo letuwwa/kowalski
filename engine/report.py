@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from ipaddress import IPv4Address
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -46,6 +47,7 @@ class ScanReport:
     completed_at: datetime
     results: dict[str, list[TCPPortResult]]
     id: UUID = field(default_factory=uuid4)
+    schema_version: int = 2
 
     def __post_init__(self) -> None:
         for timestamp in (self.started_at, self.completed_at):
@@ -55,6 +57,16 @@ class ScanReport:
             raise ValueError("Completion must not precede scan start")
         self.started_at = self.started_at.astimezone(UTC)
         self.completed_at = self.completed_at.astimezone(UTC)
+
+    @property
+    def resolved_ips(self) -> tuple[str, ...]:
+        """Actual destinations represented in this completed report's evidence."""
+        return tuple(
+            sorted(
+                {row.target for rows in self.results.values() for row in rows},
+                key=IPv4Address,
+            )
+        )
 
     @property
     def summary(self) -> dict[str, dict[str, int]]:
@@ -76,7 +88,7 @@ class ScanReport:
         database insert. Derived summary counts are deliberately not stored.
         """
         return {
-            "schema_version": 1,
+            "schema_version": self.schema_version,
             "id": self.id,
             "target": self.target,
             "started_at": self.started_at,
@@ -105,6 +117,7 @@ class ScanReport:
             "started_at": self.started_at.isoformat(),
             "completed_at": self.completed_at.isoformat(),
             "summary": self.summary,
+            "resolved_ips": list(self.resolved_ips),
         }
 
     def to_json(self) -> str:
