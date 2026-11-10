@@ -17,7 +17,7 @@ Frontend → authenticated API → ScannerService → ScanReport
 
 ## Storage models
 
-SQLAlchemy models in `app/models/` define reports and API jobs:
+SQLAlchemy models in `api/models/` define reports and API jobs:
 
 | Table | Fields |
 | --- | --- |
@@ -39,7 +39,7 @@ snapshot; later scans create new records. Handle repeated saves of the same
 report UUID without duplicating results. A storage failure rolls back the report
 and marks the job failed; recovery/retry behavior is deferred.
 
-`engine/report.py` already provides UUIDs, UTC timestamps, configuration,
+`core/report.py` already provides UUIDs, UTC timestamps, configuration,
 evidence, and derived summary counts. `to_record()` retains native UUID/datetime
 values and JSON-compatible payloads, but is not an ORM model. Map reports to
 normalized rows in the persistence layer; no engine database dependency is needed.

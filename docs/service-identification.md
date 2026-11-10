@@ -5,7 +5,7 @@ identification lines. Default: port 22. Alternate ports must also be part of the
 TCP port selection; no extra ports are scanned automatically.
 
 ```bash
-uv run python -m engine.scan 127.0.0.1 --allow-target 127.0.0.1 --ports 22,2222 --service-ports 22,2222
+uv run python -m cli.scan 127.0.0.1 --allow-target 127.0.0.1 --ports 22,2222 --service-ports 22,2222
 ```
 
 API option: `"service_ports": [22, 2222]`. Disable with `[]` in the API or

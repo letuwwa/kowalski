@@ -7,6 +7,9 @@ Supports scoped IPv4/hostname TCP scans, SSH banner identification, and JSON rep
 Requires Python 3.14+ and uv. Run commands from the repository root.
 PostgreSQL and application secrets are required only for the backend.
 
+The shared scanner and report code lives in [`core/`](core/). The Flask
+backend lives in [`api/`](api/), and the CLI in [`cli/`](cli/).
+
 ## Setup
 
 ```bash
@@ -18,13 +21,13 @@ uv sync --locked
 
 ```bash
 # Scan explicit ports and ranges within the authorized IPv4 scope.
-uv run python -m engine.scan 127.0.0.1 --allow-ip 127.0.0.1 --ports 22,5432,8000-8010
+uv run python -m cli.scan 127.0.0.1 --allow-ip 127.0.0.1 --ports 22,5432,8000-8010
 
 # Export a structured report.
-uv run python -m engine.scan 127.0.0.1 --allow-ip 127.0.0.1 --ports 22,5432 --format json > report.json
+uv run python -m cli.scan 127.0.0.1 --allow-ip 127.0.0.1 --ports 22,5432 --format json > report.json
 
 # Show all options.
-uv run python -m engine.scan --help
+uv run python -m cli.scan --help
 ```
 
 `--allow-ip` is required and repeatable. Defaults: `--timeout 1`,
@@ -32,7 +35,7 @@ uv run python -m engine.scan --help
 Use `--no-color` to disable colored results. For a hostname:
 
 ```bash
-uv run python -m engine.scan scan.example.com --allow-target scan.example.com --ports 22,443
+uv run python -m cli.scan scan.example.com --allow-target scan.example.com --ports 22,443
 ```
 
 Results distinguish `open` (accepted), `closed` (refused), and `unknown`
@@ -44,7 +47,7 @@ Only ports included in the TCP scan are eligible. Banners are self-reported evid
 
 Reports include UUID, UTC timestamps, configuration, evidence, and summary
 counts. CLI scans run independently of the API and do not save to a database.
-See [engine notes](engine/README.md) for the service and report interfaces.
+See [core notes](core/README.md) for the service and report interfaces.
 The [scan API](docs/scans-api.md) saves reports and exposes run history.
 Next: [simple React frontend](docs/next-features.md).
 
@@ -100,7 +103,8 @@ Adding `--volumes` to `down` deletes database data.
 
 ## Migrations
 
-Use Flask-Migrate so commands load the app configuration.
+Use Flask-Migrate so commands load the app configuration. Migration files are in
+[`api/migrations/`](api/migrations/).
 
 ```bash
 # Apply pending migrations.
@@ -113,7 +117,7 @@ uv run flask --app run.py db migrate -m "describe change"
 uv run flask --app run.py db current
 
 # Show migration history without connecting to the database.
-uv run alembic -c migrations/alembic.ini history
+uv run alembic -c api/migrations/alembic.ini history
 
 # Check that the database schema matches the models.
 uv run flask --app run.py db check
@@ -135,7 +139,8 @@ and index.
 
 ## Quality and maintenance
 
-GitHub Actions runs tests with coverage on pushes and pull requests.
+GitHub Actions runs the full suite with coverage. Tests are grouped under
+[`tests/api/`](tests/api/), [`tests/cli/`](tests/cli/), and [`tests/core/`](tests/core/).
 
 ```bash
 # Check formatting and lint.
@@ -145,8 +150,11 @@ uv run ruff check .
 # Run tests with isolated SQLite and loopback sockets; enforce 85% coverage.
 uv run pytest --cov --cov-report=term-missing
 
-# Test against PostgreSQL: use a disposable database; tables are dropped.
-uv run pytest --database-url 'postgresql://<user>:<password>@localhost:<port>/<test-db>'
+# Run only the CLI and core suites.
+uv run pytest tests/cli tests/core
+
+# Run API tests against PostgreSQL: use a disposable database; tables are dropped.
+uv run pytest tests/api --database-url 'postgresql://<user>:<password>@localhost:<port>/<test-db>'
 
 # Remove expired token revocation records.
 uv run flask --app run.py cleanup-token-blocklist
