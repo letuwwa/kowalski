@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Navigate, useLocation } from 'react-router';
+import { Link, Navigate, useLocation } from 'react-router';
 import { signInError } from './authApi';
 import { useAuth } from './authContext';
 import { getReturnPath } from './returnPath';
@@ -80,6 +80,9 @@ export function LoginPage() {
           {pending ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
+      <p className="auth-switch">
+        New to Kowalski? <Link to="/register" state={location.state}>Create an account</Link>
+      </p>
     </section>
   );
 }

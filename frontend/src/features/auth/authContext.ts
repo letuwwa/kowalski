@@ -1,11 +1,12 @@
 import { createContext, useContext } from 'react';
-import type { User } from './authApi';
+import type { Registration, User } from './authApi';
 
 type AuthState = {
   user: User | null;
   accessToken: string | null;
   notice: string;
   signIn: (identifier: string, password: string) => Promise<void>;
+  register: (fields: Registration) => Promise<void>;
   signOut: () => Promise<void>;
 };
 

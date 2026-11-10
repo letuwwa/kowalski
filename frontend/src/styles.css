@@ -59,3 +59,19 @@ p { margin: 0; }
 .account div { margin-bottom: .75rem; }
 .account dt { font-weight: 600; }
 .account dd { margin: .25rem 0 0; overflow-wrap: anywhere; }
+
+.auth-switch { margin-top: 1rem; }
+input[aria-invalid='true'] { border-color: #a21b26; }
+
+.workspace-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .625rem 1rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.workspace-nav a { color: inherit; }
+.workspace-nav a[aria-current='page'] { font-weight: 600; }
+.workspace-nav + .page { margin-top: 2rem; }

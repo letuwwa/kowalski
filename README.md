@@ -94,8 +94,8 @@ npm --prefix frontend ci
 npm --prefix frontend run dev
 ```
 
-Open [the sign-in page](http://127.0.0.1:3000/login). The UI supports JWT sign-in,
-account details, and sign-out. See the [frontend guide](frontend/README.md) for
+Open [the sign-in page](http://127.0.0.1:3000/login). The UI supports registration,
+JWT sign-in, profile, and sign-out. See the [frontend guide](frontend/README.md) for
 account setup, testing, and adding pages.
 
 ## Docker

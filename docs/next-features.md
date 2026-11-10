@@ -21,9 +21,9 @@ Discuss additional protocols and active probes before adding them.
 
 ## 3. Simple React frontend
 
-- Implemented: [React frontend](../frontend/README.md) with JWT sign-in, account
-  details, and sign-out using the existing authentication API. Protected routes,
-  feature modules, and a shared API client are ready for additional pages.
+- Implemented: [React frontend](../frontend/README.md) with registration, JWT
+  sign-in, profile, and a navbar for signed-in users. Additional authenticated
+  pages can use the same layout and API client.
 - Next: scan submission and job status polling, followed by past runs, report
   details, and a target's chronological changes.
 - Clearly distinguish unknown states and unscanned ports; show API validation

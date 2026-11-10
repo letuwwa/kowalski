@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import { signIn, signOut } from './authApi';
-import type { Session } from './authApi';
+import { registerAccount, signIn, signOut } from './authApi';
+import type { Registration, Session } from './authApi';
 import { AuthContext } from './authContext';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -11,6 +11,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function login(identifier: string, password: string) {
     setNotice('');
     setSession(await signIn(identifier, password));
+  }
+
+  async function register(fields: Registration) {
+    setNotice('');
+    setSession(await registerAccount(fields));
   }
 
   async function logout() {
@@ -31,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken: session?.tokens.access_token ?? null,
       notice,
       signIn: login,
+      register,
       signOut: logout,
     }}>
       {children}

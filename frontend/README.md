@@ -1,7 +1,7 @@
 # Kowalski frontend
 
-A React and TypeScript client for the Flask API. The current screens are sign-in
-and account details. Scan submission and history are planned.
+A React and TypeScript client for the Flask API. The current screens are sign-in,
+registration, and profile. Scan submission and history are planned.
 
 ## Local development
 
@@ -17,23 +17,24 @@ Open [http://127.0.0.1:3000/login](http://127.0.0.1:3000/login). Vite proxies `/
 `http://127.0.0.1:5000/*`. Set `KOWALSKI_API_URL` in `frontend/.env.local` if the
 backend runs on another origin.
 
-## Sign in
+## Accounts
 
-Use an existing account, or register one by sending `email`, `username`,
-`first_name`, `last_name`, and `password` as JSON to `POST /auth/register` on
-the Flask API. The UI currently has no registration form.
+Use an existing account or open `/register` to create one. The form calls
+`POST /auth/register`, shows validation errors from Flask, and signs you in
+with the returned JWTs. `/profile` displays your name, username, and email.
 
 Enter the email or username and password on `/login`. React sends them to
 `POST /auth/login` and uses the access JWT from the response to fetch
-`GET /auth/me` before opening `/account`. Sign-out sends the refresh JWT to
-`POST /auth/logout` so Flask can revoke the session even if the access JWT
-has expired. Tokens stay in memory and are not refreshed automatically.
+`GET /auth/me` before opening `/profile`. Sign-out in the navbar sends the
+refresh JWT to `POST /auth/logout` so Flask can revoke the session even if the
+access JWT has expired. Tokens stay in memory and are not refreshed automatically.
 Reloading requires signing in again.
 
 ## Structure
 
-- `src/app/` sets up React Router and registers pages. `/login` is public;
-  `/account` is behind `RequireAuth`. Unknown routes show a not-found page.
+- `src/app/` sets up React Router and registers pages. `/login` and `/register`
+  are public. `RequireAuth` and `WorkspaceLayout` protect `/profile` and give it
+  the navbar. `/account` redirects to `/profile`; unknown routes show a not-found page.
 - `src/features/` owns pages, API calls, and state for each feature. Auth owns
   the in-memory session and exposes `useAuth()` for the user and access token.
   The refresh token stays inside the auth feature.
@@ -42,8 +43,8 @@ Reloading requires signing in again.
   request and response types.
 
 For a new feature, create a folder under `src/features/` and register its page
-in `src/app/AppRoutes.tsx`. Add authenticated pages under `RequireAuth` so a
-signed-out visitor returns to the requested page after signing in. Keep state
+in `src/app/AppRoutes.tsx`. Add authenticated pages under `WorkspaceLayout` so
+they get the navbar and signed-out visitors return after signing in. Keep state
 in the feature until more than one feature needs it.
 
 ## Checks and deployment
