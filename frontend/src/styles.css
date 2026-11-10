@@ -1,0 +1,61 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #222;
+  background: #fff;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+
+.page {
+  max-width: 26rem;
+  margin: clamp(2rem, 12vh, 7rem) auto 2rem;
+  padding: 0 1rem;
+}
+
+h1 {
+  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
+}
+
+form, .field {
+  display: grid;
+  gap: 1rem;
+}
+
+.field { gap: .375rem; }
+
+.password-field {
+  display: flex;
+  gap: .5rem;
+}
+
+input, button {
+  min-height: 2.5rem;
+  padding: .5rem .625rem;
+  border: 1px solid #767676;
+  border-radius: 3px;
+  font: inherit;
+  color: inherit;
+}
+
+input {
+  width: 100%;
+  min-width: 0;
+}
+
+button {
+  background: #f2f2f2;
+  cursor: pointer;
+}
+
+button[type='submit'] { justify-self: start; }
+button:hover:not(:disabled) { background: #e5e5e5; }
+button:disabled { cursor: wait; opacity: .7; }
+
+p { margin: 0; }
+.error { color: #a21b26; }
+
+.account div { margin-bottom: .75rem; }
+.account dt { font-weight: 600; }
+.account dd { margin: .25rem 0 0; overflow-wrap: anywhere; }

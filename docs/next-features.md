@@ -21,10 +21,11 @@ Discuss additional protocols and active probes before adding them.
 
 ## 3. Simple React frontend
 
-- Create the application in `./frontend` after the two engine features above.
-- Reuse the existing authentication and scan API.
-- Start with login, scan submission, job status polling, past runs, report details,
-  and a target's chronological changes.
+- Implemented: [React frontend](../frontend/README.md) with JWT sign-in, account
+  details, and sign-out using the existing authentication API. Protected routes,
+  feature modules, and a shared API client are ready for additional pages.
+- Next: scan submission and job status polling, followed by past runs, report
+  details, and a target's chronological changes.
 - Clearly distinguish unknown states and unscanned ports; show API validation
   errors and loading/empty states.
 - Keep the UI small; defer advanced dashboards, scheduling, and extra workflows.

@@ -58,9 +58,10 @@ Hostname support is implemented: preserve the normalized requested name and
 each resolved IP. History compares matching IP/port pairs and reports DNS address
 changes separately. Existing IPv4 rows are backfilled by migration `35ae702d91c4`.
 
-Next: service identification, then a simple React app in `./frontend`;
-see [next features](next-features.md). Retention, cancellation,
-deletion, and automatic retries remain undecided; discuss them before adding behavior.
+SSH banner observations are stored with reports and compared across runs. The
+[React frontend](../frontend/README.md) currently handles sign-in and account
+details; scan submission, status, and history pages are [planned](next-features.md).
+Retention, cancellation, deletion, and automatic retries remain undecided.
 
 ## Comparison semantics
 

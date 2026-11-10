@@ -8,7 +8,8 @@ Requires Python 3.14+ and uv. Run commands from the repository root.
 PostgreSQL and application secrets are required only for the backend.
 
 The shared scanner and report code lives in [`core/`](core/). The Flask
-backend lives in [`api/`](api/), and the CLI in [`cli/`](cli/).
+backend lives in [`api/`](api/), the CLI in [`cli/`](cli/), and the React app
+in [`frontend/`](frontend/).
 
 ## Setup
 
@@ -49,7 +50,6 @@ Reports include UUID, UTC timestamps, configuration, evidence, and summary
 counts. CLI scans run independently of the API and do not save to a database.
 See [core notes](core/README.md) for the service and report interfaces.
 The [scan API](docs/scans-api.md) saves reports and exposes run history.
-Next: [simple React frontend](docs/next-features.md).
 
 ## Backend setup
 
@@ -84,6 +84,19 @@ curl http://localhost:5000/
 
 For an existing PostgreSQL server, use `createdb kowalski` instead of starting
 Compose, and configure `DATABASE_URL` for that server.
+
+## Run the frontend locally
+
+With Flask running on port 5000 and Node.js 22.12+ installed, run:
+
+```bash
+npm --prefix frontend ci
+npm --prefix frontend run dev
+```
+
+Open [the sign-in page](http://127.0.0.1:3000/login). The UI supports JWT sign-in,
+account details, and sign-out. See the [frontend guide](frontend/README.md) for
+account setup, testing, and adding pages.
 
 ## Docker
 
