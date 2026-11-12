@@ -5,6 +5,13 @@ export function ScanResults({ job, paused }: { job: ScanDetails; paused: boolean
   const results = job.report?.results.tcp ?? [];
   const services = new Map((job.report?.services ?? []).map((row) => [`${row.ip_address}:${row.port}`, row]));
 
+  const counts = {
+    total: results.length,
+    open: results.filter((row) => row.state === 'open').length,
+    closed: results.filter((row) => row.state === 'closed').length,
+    unknown: results.filter((row) => row.state === 'unknown').length,
+  };
+
   return (
     <>
       <p role="status">{job.target} — {job.status}</p>
@@ -15,6 +22,12 @@ export function ScanResults({ job, paused }: { job: ScanDetails; paused: boolean
       {job.status === 'failed' && <p className="error" role="alert">{job.error || 'The scan failed. No completed report was saved.'}</p>}
       {job.status === 'completed' && (
         job.report ? <>
+          <dl className="scan-metrics" aria-label="Selected scan statistics">
+            <div><dt>TCP checks</dt><dd>{counts.total}</dd></div>
+            <div><dt>Open</dt><dd>{counts.open}</dd></div>
+            <div><dt>Closed</dt><dd>{counts.closed}</dd></div>
+            <div><dt>Unknown</dt><dd>{counts.unknown}</dd></div>
+          </dl>
           <div className="table-scroll">
             <table>
               <caption>TCP results</caption>

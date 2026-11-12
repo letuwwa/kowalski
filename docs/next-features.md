@@ -24,8 +24,10 @@ Discuss additional protocols and active probes before adding them.
 - Implemented: [React frontend](../frontend/README.md) with registration, JWT
   sign-in/refresh, profile, and a navbar for signed-in users. `/scans` supports
   presets/custom ports, collapsed advanced options, polling, minimal results,
-  and a paginated past-scans list. Results appear below the form.
-- Next: a target's chronological changes using the existing history API.
+  and a paginated past-scans list. The dashboard includes a chronological
+  target-history panel with TCP, SSH, address, and port-coverage differences.
+- Possible follow-ups: past-scan filters and richer report evidence. Discuss
+  scope before implementing them.
 - Clearly distinguish unknown states and unscanned ports; show API validation
   errors and loading/empty states.
 - Keep the UI small; defer advanced dashboards, scheduling, and extra workflows.

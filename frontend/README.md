@@ -1,7 +1,7 @@
 # Kowalski frontend
 
 A React and TypeScript client for the Flask API, with registration, sign-in,
-profile, TCP scan submission, results, and a past-scans list.
+profile, and a scan dashboard with results, past scans, and target differences.
 
 ## Local development
 
@@ -47,8 +47,12 @@ uv run flask --app run.py db upgrade
 uv run flask --app run.py scan-worker
 ```
 
-Submission queues a job. Its status and results appear below the form; the
-selected run is retained as `/scans?run=<id>`. It polls every two seconds after
+The dashboard separates the new-scan form, selected result, target history,
+and past requests into panels. Selected results include counts of TCP checks,
+open, closed, and unknown states. Panels stack on smaller screens.
+
+Submission queues a job. Its status and results appear in the selected-scan
+panel; the run is retained as `/scans?run=<id>`. It polls every two seconds after
 each response until completion or failure. Navigating away or signing out
 stops polling, not the backend job. If a status request fails, use **Retry status
 check**. No timeout or lost submission response is automatically retried; check
@@ -58,7 +62,24 @@ Results show IP, port, state, and identified service. Unknown is not closed;
 an advertised service is not a confirmed vulnerability. **Past scans** lists
 owned requests, newest first, with **View**, **Load more**, and a refresh button.
 The selected run's status updates in that list as it is polled. Other rows can
-be refreshed manually. Target timelines and comparisons are not yet in the UI.
+be refreshed manually.
+
+### Target history
+
+Selecting a scan opens that target's history. You can also enter another IPv4
+address or hostname in the **Target history** panel. The target is retained as
+a `target` URL parameter, independently of the selected result.
+
+The panel calls `/scans/history`, displaying completed runs in chronological
+order. Expand a run to see its differences from the preceding completed run:
+TCP states, SSH banner evidence, address coverage, and ports observed in only
+one run. The first run is a baseline. Configuration changes are called out;
+unknown states and missing evidence never imply closure or vulnerability removal.
+
+**Load later scans** appends ten runs at a time, preserving comparisons across
+pages. Changing targets or refreshing starts from the first page. The history
+refreshes when the selected scan completes. **View this run** opens its report
+in the selected-scan panel.
 
 ## Structure
 
@@ -68,7 +89,10 @@ be refreshed manually. Target timelines and comparisons are not yet in the UI.
 - `src/features/` owns pages, API calls, and state for each feature. Auth owns
   the in-memory session. `useAuth().request` handles protected calls and JWT
   refresh. The refresh token stays inside the auth feature. Scans own their
-  form, API types, polling, and list pagination under `src/features/scans/`.
+  form, API types, polling, and pagination under `src/features/scans/`.
+  `ScansPage` coordinates selection; `ScanForm`, `PastScansPanel`, and
+  `TargetHistoryPanel` own their respective views. History interpretation stays
+  separate from rendering in `historyDifferences.ts`.
 - `src/shared/api/` provides `requestJson` for calls to Flask, including common
   timeouts, cancellation, and HTTP errors. Feature modules define their own
   request and response types.

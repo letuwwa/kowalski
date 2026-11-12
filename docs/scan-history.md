@@ -60,8 +60,9 @@ changes separately. Existing IPv4 rows are backfilled by migration `35ae702d91c4
 
 SSH banner observations are stored with reports and compared across runs. The
 [React frontend](../frontend/README.md) supports registration, sign-in, profile,
-scan submission, status/results, and a paginated past-scans list. Target timelines
-and change comparisons are [planned](next-features.md).
+scan submission, status/results, and a paginated past-scans list. Its target-history
+panel uses `/scans/history` to show consecutive differences, baseline runs,
+configuration changes, and inconclusive observations.
 Retention, cancellation, deletion, and automatic retries remain undecided.
 
 ## Comparison semantics
