@@ -19,12 +19,12 @@ export function WorkspaceLayout() {
   return (
     <>
       <nav className="workspace-nav" aria-label="Main navigation">
-        <NavLink to="/profile">Profile</NavLink>
+        <div className="nav-links"><NavLink to="/scans">Scan</NavLink><NavLink to="/profile">Profile</NavLink></div>
         <button type="button" disabled={pending} onClick={handleLogout}>
           {pending ? 'Signing out…' : 'Sign out'}
         </button>
       </nav>
-      <main className="page"><Outlet /></main>
+      <main className="workspace-page"><Outlet /></main>
     </>
   );
 }

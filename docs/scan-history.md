@@ -59,8 +59,9 @@ each resolved IP. History compares matching IP/port pairs and reports DNS addres
 changes separately. Existing IPv4 rows are backfilled by migration `35ae702d91c4`.
 
 SSH banner observations are stored with reports and compared across runs. The
-[React frontend](../frontend/README.md) currently handles registration, sign-in,
-and profile; scan submission, status, and history pages are [planned](next-features.md).
+[React frontend](../frontend/README.md) supports registration, sign-in, profile,
+scan submission, status/results, and a paginated past-scans list. Target timelines
+and change comparisons are [planned](next-features.md).
 Retention, cancellation, deletion, and automatic retries remain undecided.
 
 ## Comparison semantics

@@ -75,3 +75,25 @@ input[aria-invalid='true'] { border-color: #a21b26; }
 .workspace-nav a { color: inherit; }
 .workspace-nav a[aria-current='page'] { font-weight: 600; }
 .workspace-nav + .page { margin-top: 2rem; }
+
+.nav-links { display: flex; gap: 1rem; }
+.workspace-page { max-width: 58rem; margin: 2rem auto; padding: 0 1rem; }
+.workspace-page > section:not(.scans-page) { max-width: 26rem; margin: 0 auto; }
+.scans-page form { max-width: 32rem; }
+fieldset, .advanced-settings { display: grid; gap: 1rem; }
+fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+fieldset button[type='submit'] { justify-self: start; }
+select { font: inherit; color: inherit; min-height: 2.5rem; padding: .5rem; border: 1px solid #767676; border-radius: 3px; background: white; }
+small, .scan-note { font-size: .875rem; line-height: 1.5; }
+.scan-note { overflow-wrap: anywhere; }
+summary { cursor: pointer; }
+.advanced-settings { margin-top: 1rem; }
+.scan-section { display: grid; gap: .75rem; margin-top: 2.5rem; }
+.scan-section > button, .scan-section > div > button { justify-self: start; }
+h2 { margin: 0; font-size: 1.2rem; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+caption { text-align: left; margin-bottom: .5rem; }
+th, td { padding: .6rem; text-align: left; vertical-align: top; border: 1px solid #ccc; overflow-wrap: anywhere; }
+th { background: #f2f2f2; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

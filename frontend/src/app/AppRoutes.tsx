@@ -1,4 +1,5 @@
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router';
+import { ScansPage } from '../features/scans/ScansPage';
 import { ProfilePage } from '../features/account/ProfilePage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
@@ -36,6 +37,7 @@ export function AppRoutes() {
       <Route element={<RequireAuth />}>
         <Route element={<WorkspaceLayout />}>
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="scans" element={<ScansPage />} />
         </Route>
       </Route>
     </Routes>

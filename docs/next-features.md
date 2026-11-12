@@ -22,10 +22,10 @@ Discuss additional protocols and active probes before adding them.
 ## 3. Simple React frontend
 
 - Implemented: [React frontend](../frontend/README.md) with registration, JWT
-  sign-in, profile, and a navbar for signed-in users. Additional authenticated
-  pages can use the same layout and API client.
-- Next: scan submission and job status polling, followed by past runs, report
-  details, and a target's chronological changes.
+  sign-in/refresh, profile, and a navbar for signed-in users. `/scans` supports
+  presets/custom ports, collapsed advanced options, polling, minimal results,
+  and a paginated past-scans list. Results appear below the form.
+- Next: a target's chronological changes using the existing history API.
 - Clearly distinguish unknown states and unscanned ports; show API validation
   errors and loading/empty states.
 - Keep the UI small; defer advanced dashboards, scheduling, and extra workflows.

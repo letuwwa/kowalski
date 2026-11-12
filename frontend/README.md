@@ -1,7 +1,7 @@
 # Kowalski frontend
 
-A React and TypeScript client for the Flask API. The current screens are sign-in,
-registration, and profile. Scan submission and history are planned.
+A React and TypeScript client for the Flask API, with registration, sign-in,
+profile, TCP scan submission, results, and a past-scans list.
 
 ## Local development
 
@@ -27,17 +27,48 @@ Enter the email or username and password on `/login`. React sends them to
 `POST /auth/login` and uses the access JWT from the response to fetch
 `GET /auth/me` before opening `/profile`. Sign-out in the navbar sends the
 refresh JWT to `POST /auth/logout` so Flask can revoke the session even if the
-access JWT has expired. Tokens stay in memory and are not refreshed automatically.
-Reloading requires signing in again.
+access JWT has expired. Protected requests refresh an expired access JWT once
+through `/auth/refresh`; concurrent requests share that refresh. A rejected
+refresh returns you to sign-in. Tokens stay in memory, so reloading still
+requires signing in again.
+
+## Scans
+
+Open **Scan** in the navbar or `/scans`. Enter one authorized IPv4 address or
+hostname. Ports start empty: choose a web, remote-access, or common TCP preset,
+or enter custom ports and ranges such as `22,80,8000-8010` (at most 1024 ports).
+Collapsed advanced settings explain timeout, concurrency, and rate limit.
+SSH identification uses the backend default, with no separate control.
+
+Apply migrations and run the API worker alongside Flask:
+
+```bash
+uv run flask --app run.py db upgrade
+uv run flask --app run.py scan-worker
+```
+
+Submission queues a job. Its status and results appear below the form; the
+selected run is retained as `/scans?run=<id>`. It polls every two seconds after
+each response until completion or failure. Navigating away or signing out
+stops polling, not the backend job. If a status request fails, use **Retry status
+check**. No timeout or lost submission response is automatically retried; check
+**Past scans** before submitting again if the outcome is uncertain.
+
+Results show IP, port, state, and identified service. Unknown is not closed;
+an advertised service is not a confirmed vulnerability. **Past scans** lists
+owned requests, newest first, with **View**, **Load more**, and a refresh button.
+The selected run's status updates in that list as it is polled. Other rows can
+be refreshed manually. Target timelines and comparisons are not yet in the UI.
 
 ## Structure
 
 - `src/app/` sets up React Router and registers pages. `/login` and `/register`
-  are public. `RequireAuth` and `WorkspaceLayout` protect `/profile` and give it
+  are public. `RequireAuth` and `WorkspaceLayout` protect `/profile` and `/scans`, giving them
   the navbar. `/account` redirects to `/profile`; unknown routes show a not-found page.
 - `src/features/` owns pages, API calls, and state for each feature. Auth owns
-  the in-memory session and exposes `useAuth()` for the user and access token.
-  The refresh token stays inside the auth feature.
+  the in-memory session. `useAuth().request` handles protected calls and JWT
+  refresh. The refresh token stays inside the auth feature. Scans own their
+  form, API types, polling, and list pagination under `src/features/scans/`.
 - `src/shared/api/` provides `requestJson` for calls to Flask, including common
   timeouts, cancellation, and HTTP errors. Feature modules define their own
   request and response types.
@@ -49,7 +80,7 @@ in the feature until more than one feature needs it.
 
 ## Checks and deployment
 
-Run `npm --prefix frontend test` for auth and redirect tests and
+Run `npm --prefix frontend test` for auth, redirect, scan, and polling tests and
 `npm --prefix frontend run build` to type-check and build. For deployment,
 serve `frontend/dist`, serve its `index.html` for client-side routes, and proxy
 `/api/*` to Flask with the `/api` prefix removed.
