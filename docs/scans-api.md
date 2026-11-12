@@ -52,7 +52,7 @@ The database holds queued/running/completed/failed jobs. PostgreSQL coordinates
 one active scan at a time across worker processes. If a worker stops, the next
 worker marks abandoned running jobs failed. SQLite is for single-process tests.
 
-Resource defaults are in `app/config.py`: 1024 ports, timeout up to 5 seconds,
+Resource defaults are in `api/config.py`: 1024 ports, timeout up to 5 seconds,
 20 concurrent connections, 100 attempts/second, 5 pending jobs/user, 100 pending
 jobs overall, and a 300-second job deadline. They are limits, not target lists.
 If execution or storage fails, the job is failed; no partial report is committed.

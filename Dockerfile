@@ -25,5 +25,5 @@ USER app
 
 EXPOSE 5000
 
-ENTRYPOINT ["./docker/entrypoint.sh"]
+ENTRYPOINT ["./api/docker/entrypoint.sh"]
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "run:app"]
