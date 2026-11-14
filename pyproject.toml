@@ -32,7 +32,7 @@ pythonpath = ["."]
 
 [tool.coverage.run]
 branch = true
-source = ["app", "docker", "migrations", "run", "engine"]
+source = ["api", "cli", "core", "run"]
 
 [tool.coverage.report]
 fail_under = 85

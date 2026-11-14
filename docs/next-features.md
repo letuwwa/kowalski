@@ -21,10 +21,14 @@ Discuss additional protocols and active probes before adding them.
 
 ## 3. Simple React frontend
 
-- Create the application in `./frontend` after the two engine features above.
-- Reuse the existing authentication and scan API.
-- Start with login, scan submission, job status polling, past runs, report details,
-  and a target's chronological changes.
+- Implemented: [React frontend](../frontend/README.md) with registration, JWT
+  sign-in/refresh, profile, and a navbar for signed-in users. `/scans` supports
+  presets/custom ports, collapsed advanced options, polling, minimal results,
+  and a paginated past-scans list with target/status/date filters. The dark
+  workspace has separate Overview, Scans, Target history, Profile, and report
+  details views. History is newest first; comparisons remain chronological.
+- Possible follow-ups: automated browser regression tests and frontend CI.
+  Discuss scope before implementing them.
 - Clearly distinguish unknown states and unscanned ports; show API validation
   errors and loading/empty states.
 - Keep the UI small; defer advanced dashboards, scheduling, and extra workflows.
