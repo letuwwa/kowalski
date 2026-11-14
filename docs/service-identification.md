@@ -34,7 +34,9 @@ The CLI displays parsed software and status; JSON retains the evidence.
 A failed reconnect does not change the earlier TCP state. History compares
 identified banners on matching IP/port pairs, including comments. A timeout or
 missing observation cannot prove SSH disappeared. Changing probe selection may
-change the available evidence. Other protocols and active probes remain deferred.
+change the available evidence. HTTP/HTTPS identification is the next planned
+active probe; see the [documentation-only plan](http-service-identification.md).
+It is not implemented yet.
 
 Apply `uv run flask --app run.py db upgrade` before starting the updated API or
 worker. Observations are stored as JSON on completed reports; older reports remain

@@ -27,10 +27,18 @@ Discuss additional protocols and active probes before adding them.
   and a paginated past-scans list with target/status/date filters. The dark
   workspace has separate Overview, Scans, Target history, Profile, and report
   details views. History is newest first; comparisons remain chronological.
-- Possible follow-ups: automated browser regression tests and frontend CI.
-  Discuss scope before implementing them.
+- Deferred for now: frontend CI. Browser regression tests remain a possible
+  follow-up; discuss scope before implementing them.
 - Clearly distinguish unknown states and unscanned ports; show API validation
   errors and loading/empty states.
 - Keep the UI small; defer advanced dashboards, scheduling, and extra workflows.
+
+## 4. HTTP/HTTPS service identification
+
+Next planned scanning milestone; not implemented. Send a bounded HEAD request
+to selected open ports, collect response metadata and evidence, and establish
+verified TLS for HTTPS. Do not follow redirects or infer vulnerabilities.
+See the [feature plan](http-service-identification.md) for behavior, limitations,
+implementation steps, and decisions to settle before coding.
 
 Current backend usage is documented in [scan API](scans-api.md).
