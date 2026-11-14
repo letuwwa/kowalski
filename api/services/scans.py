@@ -170,6 +170,10 @@ def paginate(
 
 
 def history(owner_id: UUID, target: str, args: Mapping[str, str]) -> dict[str, object]:
+    order = args.get("order", "asc")
+    if order not in {"asc", "desc"}:
+        raise BadRequest("order must be asc or desc")
+    ascending = order == "asc"
     query = select(ScanRun).where(ScanRun.user_id == owner_id, ScanRun.target == target)
     lower = timestamp(args["from"]) if args.get("from") else None
     upper = timestamp(args["to"]) if args.get("to") else None
@@ -184,11 +188,13 @@ def history(owner_id: UUID, target: str, args: Mapping[str, str]) -> dict[str, o
         ScanRun,
         ScanRun.started_at,
         args,
-        ascending=True,
+        ascending=ascending,
     )
+    # Compare chronologically even when the requested presentation is newest-first.
+    chronological = runs if ascending else list(reversed(runs))
     previous = None
-    if runs:
-        first = runs[0]
+    if chronological:
+        first = chronological[0]
         previous = db.session.scalar(
             select(ScanRun)
             .where(
@@ -203,7 +209,7 @@ def history(owner_id: UUID, target: str, args: Mapping[str, str]) -> dict[str, o
             .limit(1)
         )
     items = []
-    for run in runs:
+    for run in chronological:
         before = (
             {(row.ip_address, row.port): row.state for row in previous.tcp_port_results}
             if previous
@@ -249,7 +255,11 @@ def history(owner_id: UUID, target: str, args: Mapping[str, str]) -> dict[str, o
             }
         )
         previous = run
-    return {"target": target, "items": items, "next_cursor": cursor}
+    return {
+        "target": target,
+        "items": items if ascending else list(reversed(items)),
+        "next_cursor": cursor,
+    }
 
 
 def service_changes(

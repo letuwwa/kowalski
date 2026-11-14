@@ -7,11 +7,31 @@ import { useAuth } from './authContext';
 import { getReturnPath } from './returnPath';
 
 const fields = [
-  { name: 'first_name', label: 'First name', type: 'text', autoComplete: 'given-name' },
-  { name: 'last_name', label: 'Last name', type: 'text', autoComplete: 'family-name' },
+  {
+    name: 'first_name',
+    label: 'First name',
+    type: 'text',
+    autoComplete: 'given-name',
+  },
+  {
+    name: 'last_name',
+    label: 'Last name',
+    type: 'text',
+    autoComplete: 'family-name',
+  },
   { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
-  { name: 'username', label: 'Username', type: 'text', autoComplete: 'username' },
-  { name: 'password', label: 'Password', type: 'password', autoComplete: 'new-password' },
+  {
+    name: 'username',
+    label: 'Username',
+    type: 'text',
+    autoComplete: 'username',
+  },
+  {
+    name: 'password',
+    label: 'Password',
+    type: 'password',
+    autoComplete: 'new-password',
+  },
 ] as const;
 
 export function RegisterPage() {
@@ -42,13 +62,18 @@ export function RegisterPage() {
     }
   }
 
-  if (user) return <Navigate to={getReturnPath(location.state?.from)} replace />;
+  if (user)
+    return <Navigate to={getReturnPath(location.state?.from)} replace />;
 
   return (
     <section aria-labelledby="register-title">
       <h1 id="register-title">Create an account</h1>
       <form onSubmit={handleRegister}>
-        {feedback && <p className="error" role="alert">{feedback.message}</p>}
+        {feedback && (
+          <p className="error" role="alert">
+            {feedback.message}
+          </p>
+        )}
         {fields.map(({ name, label, type, autoComplete }) => {
           const error = feedback?.fields?.[name];
           return (
@@ -59,23 +84,40 @@ export function RegisterPage() {
                 name={name}
                 type={type}
                 autoComplete={autoComplete}
-                autoCapitalize={name === 'email' || name === 'username' ? 'none' : undefined}
+                autoCapitalize={
+                  name === 'email' || name === 'username' ? 'none' : undefined
+                }
                 aria-invalid={error ? true : undefined}
-                aria-describedby={error ? `${name}-error` : name === 'password' ? 'password-hint' : undefined}
+                aria-describedby={
+                  error
+                    ? `${name}-error`
+                    : name === 'password'
+                      ? 'password-hint'
+                      : undefined
+                }
                 disabled={pending}
                 required
               />
-              {error && <p className="error" id={`${name}-error`}>{error}</p>}
-              {name === 'password' && <small id="password-hint">Use 12–128 characters.</small>}
+              {error && (
+                <p className="error" id={`${name}-error`}>
+                  {error}
+                </p>
+              )}
+              {name === 'password' && (
+                <small id="password-hint">Use 12–128 characters.</small>
+              )}
             </div>
           );
         })}
-        <button type="submit" disabled={pending}>
+        <button className="primary" type="submit" disabled={pending}>
           {pending ? 'Creating account…' : 'Create account'}
         </button>
       </form>
       <p className="auth-switch">
-        Already have an account? <Link to="/login" state={location.state}>Sign in</Link>
+        Already have an account?{' '}
+        <Link to="/login" state={location.state}>
+          Sign in
+        </Link>
       </p>
     </section>
   );

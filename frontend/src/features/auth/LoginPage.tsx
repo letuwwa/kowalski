@@ -33,7 +33,8 @@ export function LoginPage() {
     }
   }
 
-  if (user) return <Navigate to={getReturnPath(location.state?.from)} replace />;
+  if (user)
+    return <Navigate to={getReturnPath(location.state?.from)} replace />;
 
   return (
     <section aria-labelledby="login-title">
@@ -74,14 +75,21 @@ export function LoginPage() {
             </button>
           </div>
         </div>
-        {error && <p className="error" role="alert">{error}</p>}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
         {notice && <p role="status">{notice}</p>}
-        <button type="submit" disabled={pending}>
+        <button className="primary" type="submit" disabled={pending}>
           {pending ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
       <p className="auth-switch">
-        New to Kowalski? <Link to="/register" state={location.state}>Create an account</Link>
+        New to Kowalski?{' '}
+        <Link to="/register" state={location.state}>
+          Create an account
+        </Link>
       </p>
     </section>
   );

@@ -13,7 +13,14 @@ from api.extensions import db, limiter
 from api.models import ScanJob, ScanRun
 from api.routers.utils import json_body
 from api.services.reports import report_from_run
-from api.services.scans import history, job_dict, paginate, parse_target, submit_scan
+from api.services.scans import (
+    history,
+    job_dict,
+    paginate,
+    parse_target,
+    submit_scan,
+    timestamp,
+)
 
 scans_bp = Blueprint("scans", __name__, url_prefix="/scans")
 
@@ -62,6 +69,14 @@ def list_scans() -> ResponseReturnValue:
         if status not in {"queued", "running", "completed", "failed"}:
             abort(400, description="Invalid scan status")
         query = query.where(ScanJob.status == status)
+    lower = timestamp(request.args["from"]) if request.args.get("from") else None
+    upper = timestamp(request.args["to"]) if request.args.get("to") else None
+    if lower and upper and lower >= upper:
+        abort(400, description="from must be earlier than to")
+    if lower:
+        query = query.where(ScanJob.created_at >= lower)
+    if upper:
+        query = query.where(ScanJob.created_at < upper)
     jobs, cursor = paginate(query, ScanJob, ScanJob.created_at, request.args)
     return {"items": [job_dict(job) for job in jobs], "next_cursor": cursor}
 

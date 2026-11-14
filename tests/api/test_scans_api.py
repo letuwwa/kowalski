@@ -635,3 +635,102 @@ def test_hostname_longer_than_old_ip_column_is_accepted(client, users):
     )
     assert response.status_code == 202
     assert response.json["target"] == name
+
+
+def test_newest_history_preserves_chronological_baselines_across_pages(client, users):
+    when = datetime(2026, 11, 10, tzinfo=UTC)
+    for index in range(5):
+        store_report(
+            make_report(
+                when=when + timedelta(seconds=index // 3),
+                ports={22: "open" if index % 2 else "closed"},
+            ),
+            users[0].id,
+        )
+    store_report(make_report(when=when + timedelta(days=1)), users[1].id)
+    db.session.commit()
+    auth = headers(users[0])
+    ascending = client.get(
+        "/scans/history",
+        query_string={"target": "127.0.0.1", "limit": 100},
+        headers=auth,
+    ).json["items"]
+    expected = {row["report"]["id"]: row for row in ascending}
+    descending = []
+    cursor = None
+    while True:
+        params = {"target": "127.0.0.1", "limit": 2, "order": "desc"}
+        if cursor:
+            params["cursor"] = cursor
+        response = client.get("/scans/history", query_string=params, headers=auth)
+        assert response.status_code == 200
+        descending.extend(response.json["items"])
+        cursor = response.json["next_cursor"]
+        if cursor is None:
+            break
+    assert [row["report"]["id"] for row in descending] == [
+        row["report"]["id"] for row in reversed(ascending)
+    ]
+    for row in descending:
+        assert row == expected[row["report"]["id"]]
+    filtered = client.get(
+        "/scans/history",
+        query_string={
+            "target": "127.0.0.1",
+            "order": "desc",
+            "from": (when + timedelta(seconds=1)).isoformat(),
+        },
+        headers=auth,
+    ).json["items"]
+    assert filtered
+    for row in filtered:
+        assert row == expected[row["report"]["id"]]
+    assert (
+        client.get(
+            "/scans/history?target=127.0.0.1&order=invalid", headers=auth
+        ).status_code
+        == 400
+    )
+
+
+def test_scan_list_dates_are_inclusive_start_exclusive_end_and_paginated(client, users):
+    start = datetime(2026, 11, 10, tzinfo=UTC)
+    jobs = [
+        ScanJob(
+            user_id=users[0].id,
+            target="127.0.0.1",
+            configuration={},
+            created_at=start + timedelta(days=offset),
+        )
+        for offset in (-1, 0, 1, 2)
+    ]
+    db.session.add_all(jobs)
+    db.session.add(
+        ScanJob(
+            user_id=users[1].id, target="127.0.0.1", configuration={}, created_at=start
+        )
+    )
+    db.session.commit()
+    auth = headers(users[0])
+    params = {
+        "target": "127.0.0.1",
+        "status": "queued",
+        "from": start.isoformat(),
+        "to": (start + timedelta(days=2)).isoformat(),
+        "limit": 1,
+    }
+    first = client.get("/scans", query_string=params, headers=auth).json
+    assert [row["id"] for row in first["items"]] == [str(jobs[2].id)]
+    params["cursor"] = first["next_cursor"]
+    second = client.get("/scans", query_string=params, headers=auth).json
+    assert [row["id"] for row in second["items"]] == [str(jobs[1].id)]
+    assert second["next_cursor"] is None
+    for invalid in (
+        {"from": "bad"},
+        {"to": "2026-11-10"},
+        {"from": start.isoformat(), "to": start.isoformat()},
+        {"from": (start + timedelta(days=1)).isoformat(), "to": start.isoformat()},
+    ):
+        assert (
+            client.get("/scans", query_string=invalid, headers=auth).status_code == 400
+        )

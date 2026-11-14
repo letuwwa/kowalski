@@ -60,8 +60,14 @@ There are no automatic retries, cancellation, or deletion endpoints yet.
 
 ## History
 
-Lists accept `target`, `status`, `limit` (1–100), and `cursor`. History requires
-`target`, with optional timezone-aware ISO `from`/`to`, `limit`, and `cursor`.
+Lists accept `target`, `status`, `limit` (1–100), `cursor`, and timezone-aware
+ISO `from`/`to` timestamps applied to request creation. For lists, `from` is
+inclusive and `to` is exclusive. Preserve these filters when using a cursor.
+
+History requires `target`, with optional timezone-aware ISO `from`/`to`, `limit`,
+`cursor`, and `order=asc|desc` (default `asc`). Its date boundaries remain inclusive.
+The frontend requests `order=desc`. Newest-first pages still compare each run with
+its older chronological predecessor, including across page and date boundaries.
 Pass `next_cursor` unchanged as an encoded query value, retaining the filters.
 
 History groups runs by normalized submitted target. Items contain a report,

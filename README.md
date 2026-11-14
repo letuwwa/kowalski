@@ -95,7 +95,7 @@ npm --prefix frontend run dev
 ```
 
 Open [the sign-in page](http://127.0.0.1:3000/login). The UI supports registration,
-profile, JWT sign-in/refresh, and a scan dashboard with results and target history. Run the
+profile, JWT sign-in/refresh, and a dark workspace for scans, reports, and history. Run the
 `scan-worker` alongside Flask to process scans. See the [frontend guide](frontend/README.md)
 for setup, testing, and adding pages.
 

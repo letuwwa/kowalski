@@ -1,7 +1,7 @@
 # Kowalski frontend
 
 A React and TypeScript client for the Flask API, with registration, sign-in,
-profile, and a scan dashboard with results, past scans, and target differences.
+profile, and a dark workspace with an overview, scans, target history, and report details.
 
 ## Local development
 
@@ -25,7 +25,7 @@ with the returned JWTs. `/profile` displays your name, username, and email.
 
 Enter the email or username and password on `/login`. React sends them to
 `POST /auth/login` and uses the access JWT from the response to fetch
-`GET /auth/me` before opening `/profile`. Sign-out in the navbar sends the
+`GET /auth/me` before opening `/dashboard` (or the protected page you requested). Sign-out in the navbar sends the
 refresh JWT to `POST /auth/logout` so Flask can revoke the session even if the
 access JWT has expired. Protected requests refresh an expired access JWT once
 through `/auth/refresh`; concurrent requests share that refresh. A rejected
@@ -34,7 +34,7 @@ requires signing in again.
 
 ## Scans
 
-Open **Scan** in the navbar or `/scans`. Enter one authorized IPv4 address or
+Open **Scans** in the navbar or `/scans`. Enter one authorized IPv4 address or
 hostname. Ports start empty: choose a web, remote-access, or common TCP preset,
 or enter custom ports and ranges such as `22,80,8000-8010` (at most 1024 ports).
 Collapsed advanced settings explain timeout, concurrency, and rate limit.
@@ -47,12 +47,14 @@ uv run flask --app run.py db upgrade
 uv run flask --app run.py scan-worker
 ```
 
-The dashboard separates the new-scan form, selected result, target history,
-and past requests into panels. Selected results include counts of TCP checks,
-open, closed, and unknown states. Panels stack on smaller screens.
+`/dashboard` is the landing page: it shows recent activity and the latest scan.
+Activity counts cover only the latest loaded requests, not lifetime totals.
+The compact form stays visible on `/scans`. Results are expandable below the
+scan list. Top navigation links to Overview, Scans, Target history, and Profile.
+The UI uses a dark theme with a muted blue accent and no logo.
 
 Submission queues a job. Its status and results appear in the selected-scan
-panel; the run is retained as `/scans?run=<id>`. It polls every two seconds after
+section below the list; the run is retained as `/scans?run=<id>`. It polls every two seconds after
 each response until completion or failure. Navigating away or signing out
 stops polling, not the backend job. If a status request fails, use **Retry status
 check**. No timeout or lost submission response is automatically retried; check
@@ -62,37 +64,40 @@ Results show IP, port, state, and identified service. Unknown is not closed;
 an advertised service is not a confirmed vulnerability. **Past scans** lists
 owned requests, newest first, with **View**, **Load more**, and a refresh button.
 The selected run's status updates in that list as it is polled. Other rows can
-be refreshed manually.
+be refreshed manually. Filter the list by exact target, status, and date range.
+Filters apply server-side and persist in the URL. Calendar dates use your browser's
+local timezone and include the entire end date. Changing filters resets pagination.
+
+Results are sorted numerically by port, then IP address. **Report details** opens
+`/scans/<id>/report`, with timestamps, connection evidence, SSH banners, confidence,
+received bytes (control bytes escaped), and scan configuration.
 
 ### Target history
 
-Selecting a scan opens that target's history. You can also enter another IPv4
-address or hostname in the **Target history** panel. The target is retained as
-a `target` URL parameter, independently of the selected result.
+Open **Target history** or follow **View target history** from a completed scan.
+The separate `/history?target=<target>` page shows all completed runs, newest first,
+with changed runs highlighted. Expand a run to see differences from its older
+chronological predecessor: TCP states, SSH evidence, address coverage, and ports
+observed in only one run. The oldest run is the baseline. Unknown and missing
+observations are never treated as proof of closure or vulnerability removal.
 
-The panel calls `/scans/history`, displaying completed runs in chronological
-order. Expand a run to see its differences from the preceding completed run:
-TCP states, SSH banner evidence, address coverage, and ports observed in only
-one run. The first run is a baseline. Configuration changes are called out;
-unknown states and missing evidence never imply closure or vulnerability removal.
-
-**Load later scans** appends ten runs at a time, preserving comparisons across
-pages. Changing targets or refreshing starts from the first page. The history
-refreshes when the selected scan completes. **View this run** opens its report
-in the selected-scan panel.
+**Load earlier scans** appends ten older runs at a time, preserving comparisons
+across pages. Changing targets or refreshing resets pagination. **View this run**
+returns to its result on the Scans page.
 
 ## Structure
 
 - `src/app/` sets up React Router and registers pages. `/login` and `/register`
-  are public. `RequireAuth` and `WorkspaceLayout` protect `/profile` and `/scans`, giving them
-  the navbar. `/account` redirects to `/profile`; unknown routes show a not-found page.
+  are public. `RequireAuth` and `WorkspaceLayout` protect the workspace pages
+  and provide their top navigation. `/account` redirects to `/profile`; unknown routes show a not-found page.
 - `src/features/` owns pages, API calls, and state for each feature. Auth owns
   the in-memory session. `useAuth().request` handles protected calls and JWT
   refresh. The refresh token stays inside the auth feature. Scans own their
-  form, API types, polling, and pagination under `src/features/scans/`.
+  form, filters, API types, polling, and pagination under `src/features/scans/`.
   `ScansPage` coordinates selection; `ScanForm`, `PastScansPanel`, and
   `TargetHistoryPanel` own their respective views. History interpretation stays
-  separate from rendering in `historyDifferences.ts`.
+  separate from rendering in `historyDifferences.ts`. Overview lives under
+  `src/features/overview/`. See the [design decisions](../docs/frontend-design.md).
 - `src/shared/api/` provides `requestJson` for calls to Flask, including common
   timeouts, cancellation, and HTTP errors. Feature modules define their own
   request and response types.
